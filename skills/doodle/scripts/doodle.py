@@ -563,7 +563,7 @@ class Card:
 
     def __init__(self, cv, label, note, tone, w, mid=False):
         self.cv, self.tone, self.w, self.mid = cv, tone, w, mid
-        inner = w - 2 * PX
+        inner = w - 2 * PX - 6  # text widths are estimates; keep a little air before the border
         self.tl = cv.wrap(label, TS, inner, True) if label else []
         self.nl = cv.wrap(note, NS, inner) if note else []
         self.h = 2 * PY + len(self.tl) * LT + len(self.nl) * LN + (3 if self.tl and self.nl else 0) - 4
