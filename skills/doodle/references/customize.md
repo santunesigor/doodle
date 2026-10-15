@@ -4,10 +4,11 @@ Everything is optional. With no settings, Doodle writes for beginners, in the us
 
 ## Where settings live
 
-Doodle merges up to two JSON files, later ones winning:
+Doodle merges these JSON files, later ones winning:
 
 1. `~/.config/doodle/config.json` (or `$XDG_CONFIG_HOME/doodle/config.json`): your defaults everywhere.
-2. `doodle.json`: the nearest one found from the document's folder upward, stopping at the repository root.
+2. Every `doodle.json` from the repository root down to the document's folder. A file in `docs/kids/` can set only
+   `"audience": "kid"` and inherit everything else from the root file.
 
 Command-line flags (`--theme`, `--sketch`, `--scheme`) win over both, and `@theme` / `@sketch` inside a block win
 over everything for that one diagram. `--config PATH` uses one specific file instead of searching.

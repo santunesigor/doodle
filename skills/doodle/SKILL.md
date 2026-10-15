@@ -43,7 +43,7 @@ No Python? Use ` ```mermaid ` blocks instead (GitHub renders them) and skip step
 |---|---|
 | `quick` | Title question, "In three sentences", 1–2 drawings, one-line takeaway. Nothing else. |
 | `standard` (default) | The full structure below with 2–4 steps. |
-| `deep` | 3–6 steps, plus "Common mistakes" and "Check yourself" (2–3 questions, answers in `<details>`). |
+| `deep` | 3–6 steps, plus the two sections marked *deep* below. |
 
 ## Document structure (the teaching method)
 
@@ -54,8 +54,13 @@ No Python? Use ` ```mermaid ` blocks instead (GitHub renders them) and skip step
 ## Step 1: <one claim>       -> one doodle + 2–5 bullets; end with the "why"
 ## Step 2: ...               -> 2–5 steps total
 ## When it happens / Why it matters
+## Common mistakes           -> deep only: 2–4 bullets, each a mistake and how to avoid it
 ## Evidence                  -> only real logs, numbers, file paths; a `bars` drawing for numbers (omit if none)
+## Check yourself            -> deep only: 2–3 questions, each answer in <details><summary>Answer</summary>…</details>
 ```
+
+Numbers that only illustrate (not measured) can go in a step's `bars` drawing; say so in its subtitle, e.g.
+`> illustrative numbers`. The Evidence section holds only real data.
 
 Writing rules: short sentences; plain words; **bold** the key fact in each step; one idea per drawing; the drawing's
 title states the step's claim; tones tell the story (`bad` = the broken part, `ok` = the fix or healthy path,
@@ -95,7 +100,9 @@ Full syntax and examples: [references/dsl.md](references/dsl.md). Read it only i
 When the user states a **lasting** preference ("always use the chalk theme", "my team are senior devs", "save these
 in docs/explain", "use our brand purple"), save it instead of just applying it once:
 
-- For this project: edit `doodle.json` at the repository root (create it with `<doodle> --init` if missing).
+- For this project: edit the `doodle.json` that `--settings` lists last in `sources` (the nearest one), or create
+  one at the repository root with `<doodle> --init`. Files cascade: one in a subfolder overrides only the keys it
+  names, for documents in that subfolder.
 - For every project: edit `~/.config/doodle/config.json`.
 - For one document only: add `@theme NAME` to its blocks, so re-renders keep the look.
 

@@ -59,6 +59,15 @@ class ParseTest(unittest.TestCase):
         self.assertIsNone(doodle.split_edge("just a row"))
 
 
+class SlugTest(unittest.TestCase):
+    def test_slug(self):
+        self.assertEqual(doodle.slug("Por que o cache é útil?"), "por-que-o-cache-e-util")
+        self.assertEqual(doodle.slug("Server sends 304 Not Modified when the ETag matches"),
+                         "server-sends-304-not-modified-when-the")
+        self.assertEqual(doodle.slug("x" * 60), "x" * 40)
+        self.assertEqual(doodle.slug("!!!"), "diagram")
+
+
 class WrapTest(unittest.TestCase):
     def test_wraps_within_width(self):
         lines = doodle.wrap("one two three four five six seven eight", 13, 80)
@@ -334,7 +343,8 @@ class LintTest(unittest.TestCase):
 
     def test_long_text_and_many_rows(self):
         ws = self.warnings("stack: S\nOne two three four five six seven\n" + "X\n" * 8)
-        self.assertTrue(any("label has 7 words" in w for w in ws))
+        self.assertTrue(any("label is long (7 words)" in w for w in ws))
+        self.assertEqual(self.warnings("stack: S\nPula para a ponta da main"), [])  # short words are free
         self.assertTrue(any("9 rows" in w for w in ws))
 
     def test_flow_edge_typo_creates_node_with_warning(self):
@@ -503,6 +513,14 @@ class SettingsTest(unittest.TestCase):
         self.assertEqual((s["theme"], s["audience"]), ("clean", "kid"))
         self.assertEqual(s["colors"], {"info": "#111111", "ok": "#222222"})
         self.assertEqual(len(s["sources"]), 2)
+
+    def test_nested_files_cascade(self):
+        self.write("repo/.git/HEAD", "")
+        self.write("repo/doodle.json", {"theme": "clean", "audience": "developer"})
+        self.write("repo/team/doodle.json", {"depth": "deep"})
+        s = doodle.load_settings(os.path.join(self.root, "repo", "team"))
+        self.assertEqual((s["theme"], s["audience"], s["depth"]), ("clean", "developer", "deep"))
+        self.assertEqual([os.path.basename(os.path.dirname(p)) for p in s["sources"]], ["repo", "team"])
 
     def test_search_stops_at_repository_root(self):
         self.write("doodle.json", {"theme": "chalk"})

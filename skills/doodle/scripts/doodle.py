@@ -108,6 +108,11 @@ OPTIONS = {"sketch": KINDS, "vertical": ("timeline", "flow"), "horizontal": ("ti
 MAX_ROWS = {"sequence": 12, "flow": 14, "compare": 12, "tree": 14, "bars": 12}  # others: 8
 
 
+def words(text):
+    """Words that cost reading time: 'a', 'of', 'da', 'le' are free (keeps the limits fair across languages)."""
+    return len([w for w in text.split() if len(w) > 2])
+
+
 def lint(spec):
     """Warnings for things that render but probably aren't what the author meant."""
     warn = spec.warnings.append
@@ -135,15 +140,15 @@ def lint(spec):
                 warn((no, "'%s' is shown as a note; if it is a tone, write %s" % (
                     parts[-1], suggest(last, vocabulary).split("'")[1])))
         if edge:
-            words = len(edge[3].split())
-            if words > 10:
-                warn((no, "message has %d words; aim for 8 or fewer" % words))
+            if words(edge[3]) > 8:
+                warn((no, "message is long (%d words); aim for 6 or fewer" % len(edge[3].split())))
             continue
         label, note, _tone = cells(re.sub(r"^\[[^\]]+\]\s*", "", text))
-        if len(label.split()) > 6:
-            warn((no, "label has %d words; aim for 4 or fewer (put details in the note)" % len(label.split())))
-        if len(note.split()) > 16:
-            warn((no, "note has %d words; aim for 12 or fewer" % len(note.split())))
+        if words(label) > 5:
+            warn((no, "label is long (%d words); aim for 4 or fewer and put details in the note"
+                  % len(label.split())))
+        if words(note) > 14:
+            warn((no, "note is long (%d words); aim for 12 or fewer" % len(note.split())))
 
 
 def cells(text):
@@ -1196,15 +1201,15 @@ def user_config_path():
     return os.path.join(base, "doodle", "config.json")
 
 
-def find_project_config(start):
-    """The nearest doodle.json from start upward, stopping at the repository root."""
-    d = os.path.abspath(start)
+def project_configs(start):
+    """Every doodle.json from the repository root down to start, outermost first (they cascade)."""
+    found, d = [], os.path.abspath(start)
     while True:
         p = os.path.join(d, CONFIG_NAME)
         if os.path.isfile(p):
-            return p
+            found.append(p)
         if os.path.exists(os.path.join(d, ".git")) or os.path.dirname(d) == d:
-            return None
+            return found[::-1]
         d = os.path.dirname(d)
 
 
@@ -1220,9 +1225,10 @@ def read_config(path):
 
 
 def load_settings(start=".", explicit=None, warnings=None):
-    """Merge built-in defaults < ~/.config/doodle/config.json < nearest doodle.json (or explicit)."""
+    """Merge built-in defaults < ~/.config/doodle/config.json < each doodle.json from the repository root down
+    to start, so a subfolder only overrides what it names. An explicit path replaces the search."""
     settings, sources = dict(DEFAULTS), []
-    paths = [explicit] if explicit else [user_config_path(), find_project_config(start)]
+    paths = [explicit] if explicit else [user_config_path()] + project_configs(start)
     for p in paths:
         if not p or not os.path.isfile(p):
             if explicit:
@@ -1306,9 +1312,13 @@ def segments(md):
 DONE = re.compile(r"<!-- doodle\n(.*?)-->\n!\[[^\]]*\]\(([^)\s]+)\)", re.S)
 
 
-def slug(s):
+def slug(s, limit=40):
     s = unicodedata.normalize("NFKD", s).encode("ascii", "ignore").decode().lower()
-    return re.sub(r"[^a-z0-9]+", "-", s).strip("-")[:40] or "diagram"
+    s = re.sub(r"[^a-z0-9]+", "-", s).strip("-")
+    if len(s) > limit:  # cut at a word boundary when there is one
+        cut = s[:limit + 1].rfind("-")
+        s = s[:cut] if cut > limit // 2 else s[:limit]
+    return s.strip("-") or "diagram"
 
 
 def write_if_changed(path, text):

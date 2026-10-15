@@ -163,7 +163,7 @@ senior developers and use the clean theme with our purple", and it saves that in
 | `colors` | one `#hex` per tone; dark-mode versions are derived for you |
 | `scheme` | `auto` (follows light/dark mode), `light`, `dark` |
 
-Put it in your project (`doodle.json`, found from the document's folder up to the repository root) or in
+Put it at your project root (`doodle.json`; files in subfolders override only what they name) or in
 `~/.config/doodle/config.json` for every project. A single diagram can switch with `@theme chalk`.
 See [customize.md](skills/doodle/references/customize.md) for every setting.
 

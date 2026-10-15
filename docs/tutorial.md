@@ -290,7 +290,8 @@ Then edit the values you care about. Everything is optional:
 - **How it writes:** `audience` (`kid`, `beginner`, `developer`, `expert`), `depth` (`quick`, `standard`, `deep`),
   `language`, `docsDir` (where new explanations go) and `notes` (your house rules, in plain words).
 
-Doodle looks for the nearest `doodle.json` from the document's folder up to the repository root. Defaults for all
+Doodle reads every `doodle.json` from the repository root down to the document's folder; a file in a subfolder
+overrides only the keys it names. Defaults for all
 your projects go in `~/.config/doodle/config.json`. Run `doodle.py --settings` to see what is in effect.
 You don't have to edit JSON yourself: tell the agent "from now on, always…" and it saves the preference.
 Every setting is described in [customize.md](../skills/doodle/references/customize.md).

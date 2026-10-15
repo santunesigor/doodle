@@ -164,7 +164,7 @@ seniores e use o tema clean com o nosso roxo", e ele guarda isso num `doodle.jso
 | `colors` | uma cor `#hex` por tom; as versões do modo escuro são geradas para você |
 | `scheme` | `auto` (segue o modo claro/escuro), `light`, `dark` |
 
-Coloque no projeto (`doodle.json`, procurado da pasta do documento até a raiz do repositório) ou em
+Coloque na raiz do projeto (`doodle.json`; arquivos em subpastas mudam só o que citam) ou em
 `~/.config/doodle/config.json` para todos os projetos. Um desenho isolado pode trocar de tema com `@theme chalk`.
 Veja todas as configurações em [customize.md](skills/doodle/references/customize.md).
 

@@ -292,7 +292,8 @@ Depois mude só o que importa para você. Tudo é opcional:
 - **Como escreve:** `audience` (`kid`, `beginner`, `developer`, `expert`), `depth` (`quick`, `standard`, `deep`),
   `language`, `docsDir` (onde salvar as explicações novas) e `notes` (as regras da casa, em palavras normais).
 
-O Doodle procura o `doodle.json` mais próximo, da pasta do documento até a raiz do repositório. Padrões para todos os
+O Doodle lê todos os `doodle.json` da raiz do repositório até a pasta do documento; um arquivo numa subpasta muda só
+as chaves que cita. Padrões para todos os
 seus projetos ficam em `~/.config/doodle/config.json`. Rode `doodle.py --settings` para ver o que está valendo.
 Você não precisa editar JSON: diga ao agente "de agora em diante, sempre…" e ele salva a preferência.
 Todas as configurações estão em [customize.md](../skills/doodle/references/customize.md) (em inglês).
