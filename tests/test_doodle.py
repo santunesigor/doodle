@@ -129,7 +129,7 @@ class RenderTest(unittest.TestCase):
         self.assertIn(doodle.ICON["ok"], svg)
 
     def test_errors(self):
-        for src in ("cycle: c\nA", "compare: c", "sequence: s", "tree: t"):
+        for src in ("cycle: c\nA", "compare: c", "sequence: s", "tree: t", "bars: b", "hub: h"):
             with self.assertRaises(doodle.DoodleError, msg=src):
                 doodle.render(src)
 
@@ -263,6 +263,47 @@ class MarkdownTest(unittest.TestCase):
             self.assertEqual(doodle.render_markdown(md, "assets/diagrams"), expected)
             with self.assertRaises(doodle.DoodleError):
                 doodle.render_markdown(md)
+
+
+class NewKindsTest(unittest.TestCase):
+    def test_numbers(self):
+        cases = {"120 ms": 120, "1,200 req": 1200, "2.5 s": 2.5, "1,5 s": 1.5, "1.234,5": 1234.5,
+                 "≈ 30%": 30, "-3": -3}
+        for text, value in cases.items():
+            self.assertEqual(doodle.number(text), value, text)
+        self.assertIsNone(doodle.number("fast"))
+
+    def test_bars_scale_to_the_largest(self):
+        _, svg = doodle.render("bars: B\nA | 100 ms\nB | 50 ms | ok")
+        widths = [float(w) for w in re.findall(r'<rect x="[\d.]+" y="[\d.]+" width="([\d.]+)" height="26"', svg)]
+        self.assertEqual(len(widths), 2)
+        self.assertAlmostEqual(widths[0] / widths[1], 2, places=1)
+        self.assertIn("50 ms", svg)
+
+    def test_bars_errors(self):
+        with self.assertRaisesRegex(doodle.DoodleError, "line 3: bars need a number"):
+            doodle.render("bars: B\nA | 1\nB | fast")
+        with self.assertRaisesRegex(doodle.DoodleError, "negative"):
+            doodle.render("bars: B\nA | -1")
+
+    def test_hub_boxes_never_overlap(self):
+        for n in range(1, 10):
+            src = "hub: H\nCenter | the middle\n" + "".join("Spoke %d | a note here\n" % i for i in range(n))
+            spec = doodle.parse(src)
+            cv = doodle.Canvas(spec)
+            doodle.draw_hub(cv, spec)
+            boxes = [tuple(map(float, m)) for m in re.findall(
+                r'<rect x="([\d.]+)" y="([\d.]+)" width="([\d.]+)" height="([\d.]+)"', "".join(cv.parts))]
+            self.assertEqual(len(boxes), n + 1)
+            for i, a in enumerate(boxes):
+                for b in boxes[i + 1:]:
+                    apart = (a[0] + a[2] <= b[0] or b[0] + b[2] <= a[0] or
+                             a[1] + a[3] <= b[1] or b[1] + b[3] <= a[1])
+                    self.assertTrue(apart, (n, a, b))
+
+    def test_hub_needs_a_spoke(self):
+        with self.assertRaisesRegex(doodle.DoodleError, "hub needs"):
+            doodle.render("hub: H\nAlone")
 
 
 class LintTest(unittest.TestCase):

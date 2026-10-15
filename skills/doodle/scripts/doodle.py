@@ -18,6 +18,7 @@ Look and settings:
 
 Spec format (see references/dsl.md):
   kind: Title                  kind = flow | cycle | timeline | compare | tree | stack | sequence
+                                      | bars | hub
   > optional subtitle
   @sketch @vertical            options; @theme NAME changes the theme of one diagram
   label | note | tone          tone = neutral | info | ok | bad | warn
@@ -30,7 +31,7 @@ import re
 import sys
 import unicodedata
 
-KINDS = ("flow", "cycle", "timeline", "compare", "tree", "stack", "sequence")
+KINDS = ("flow", "cycle", "timeline", "compare", "tree", "stack", "sequence", "bars", "hub")
 TONES = ("neutral", "info", "ok", "bad", "warn")
 ALIAS = {  # only words unlikely to be a real note
     "good": "ok", "success": "ok", "green": "ok",
@@ -103,7 +104,7 @@ def parse(src):
 
 OPTIONS = {"sketch": KINDS, "vertical": ("timeline", "flow"), "horizontal": ("timeline", "flow"),
            "arrow": ("compare", "stack", "hub")}
-MAX_ROWS = {"sequence": 12, "flow": 14, "compare": 12, "tree": 14}  # others: 8
+MAX_ROWS = {"sequence": 12, "flow": 14, "compare": 12, "tree": 14, "bars": 12}  # others: 8
 
 
 def lint(spec):
@@ -1013,8 +1014,110 @@ def draw_sequence(cv, spec):
     return max(right, PAD + aw[0]), bottom
 
 
+NUMBER = re.compile(r"-?\d[\d.,]*")
+
+
+def number(text):
+    """First number in text: '1,200 ms' -> 1200, '2.5 s' -> 2.5, '1,5 s' -> 1.5, '1.234,5' -> 1234.5."""
+    m = NUMBER.search(text)
+    if not m:
+        return None
+    s = m.group(0).rstrip(".,")
+    if "," in s and "." in s:
+        dec = "," if s.rfind(",") > s.rfind(".") else "."
+        s = s.replace("." if dec == "," else ",", "").replace(",", ".")
+    elif "," in s:
+        s = s.replace(",", "") if re.fullmatch(r"-?\d{1,3}(,\d{3})+", s) else s.replace(",", ".")
+    try:
+        return float(s)
+    except ValueError:
+        return None
+
+
+def draw_bars(cv, spec):
+    items = []
+    for no, line in spec.rows:
+        label, note, tone = cells(line.strip())
+        value = number(note) if note else number(label)
+        if value is None:
+            raise DoodleError("line %d: bars need a number in the note, like 'DNS lookup | 120 ms'" % no)
+        if value < 0:
+            raise DoodleError("line %d: bars can't show negative numbers" % no)
+        items.append((label, note or ("%g" % value), tone, value))
+    if not items:
+        raise DoodleError("bars needs at least one row like 'Label | 42'")
+    LABW, BAR, BH = 200, 360, 26
+    labs = [cv.wrap(lab, 14, LABW, True) for lab, *_r in items]
+    lw = max(max(cv.tw(s, 14, True) for s in ls) if ls else 0 for ls in labs)
+    x0 = PAD + lw + 16
+    vmax = max(v for *_r, v in items) or 1
+    y, right = cv.top, x0 + BAR
+    for (label, note, tone, value), ls in zip(items, labs):
+        rh = max(BH, len(ls) * 18 + 6)
+        cy = y + rh / 2
+        for i, s in enumerate(ls):
+            cv.add('<text x="%s" y="%s" class="t" style="font-size:14px" text-anchor="end">%s</text>'
+                   % (f(x0 - 14), f(cy + 5 - (len(ls) - 1) * 9 + i * 18), esc(s)))
+        bw = max(6.0, BAR * value / vmax)
+        cv.add('<rect x="%s" y="%s" width="%s" height="%s" rx="%s" class="f-%s"/>'
+               % (f(x0), f(cy - BH / 2), f(bw), f(BH), f(min(cv.r * .5, 8)), tone))
+        lines = cv.wrap(note, NS, 220)
+        for i, s in enumerate(lines):
+            cv.text(x0 + bw + 10, cy + 4.5 - (len(lines) - 1) * 9 + i * 18, s, "n" + (" x-" + tone if tone != "neutral" else ""))
+        right = max(right, x0 + bw + 10 + max(cv.tw(s, NS) for s in lines))
+        y += rh + 12
+    cv.add('<path d="M%s %s V%s" class="ln"/>' % (f(x0), f(cv.top - 6), f(y - 6)))
+    return right, y - 12
+
+
+def overlaps(a, b, gap):
+    return (a.x < b.x + b.w + gap and b.x < a.x + a.w + gap and
+            a.y < b.y + b.h + gap and b.y < a.y + a.h + gap)
+
+
+def draw_hub(cv, spec):
+    rows = [cells(line.strip()) for _, line in spec.rows]
+    if len(rows) < 2:
+        raise DoodleError("hub needs the center on the first row and at least one more row around it")
+    label, note, tone = rows[0]
+    center = Card(cv, label, note, tone if tone != "neutral" else "info", 220, True)
+    spokes = [Card(cv, lab, nt, tn, 190, True) for lab, nt, tn in rows[1:]]
+    n = len(spokes)
+    hmax = max(c.h for c in spokes)
+    if n == 1:
+        angles = [0.0]
+    elif n == 2:
+        angles = [math.pi, 0.0]
+    else:
+        angles = [-math.pi / 2 + 2 * math.pi * i / n for i in range(n)]
+    rx, ry = center.w / 2 + 95 + 50, center.h / 2 + hmax / 2 + 40
+    center.place(-center.w / 2, -center.h / 2)
+    for _ in range(60):  # grow the ellipse until no two boxes touch
+        for c, a in zip(spokes, angles):
+            c.place(rx * math.cos(a) - c.w / 2, ry * math.sin(a) - c.h / 2)
+        boxes = [center] + spokes
+        if not any(overlaps(p, q, 30) for i, p in enumerate(boxes) for q in boxes[i + 1:]):
+            break
+        rx, ry = rx * 1.06, ry * 1.06
+    minx = min(c.x for c in boxes)
+    miny = min(c.y for c in boxes)
+    for c in boxes:
+        c.x += PAD - minx
+        c.y += cv.top - miny
+    arrow = "arrow" in spec.opts
+    for c in spokes:
+        x1, y1 = center.edge_point(c.cx, c.cy, 3)
+        x2, y2 = c.edge_point(center.cx, center.cy, 5 if arrow else 3)
+        cls = "e" + (" s-" + c.tone if c.tone != "neutral" else "")
+        cv.add('<path d="M%s %s L%s %s" class="%s"%s/>'
+               % (f(x1), f(y1), f(x2), f(y2), cls, ' marker-end="url(#ah)"' if arrow else ""))
+    for c in boxes:
+        c.draw()
+    return max(c.x + c.w for c in boxes), max(c.y + c.h for c in boxes)
+
+
 DRAW = {"flow": draw_flow, "cycle": draw_cycle, "timeline": draw_timeline, "compare": draw_compare,
-        "tree": draw_tree, "stack": draw_stack, "sequence": draw_sequence}
+        "tree": draw_tree, "stack": draw_stack, "sequence": draw_sequence, "bars": draw_bars, "hub": draw_hub}
 
 
 def render(src, style=None):
