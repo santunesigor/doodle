@@ -21,25 +21,38 @@ Escolha um dos jeitos abaixo.
 **Codex, Cursor, Claude Code e outros agentes com suporte a skills:**
 
 ```bash
-npx skills add santunesigor/doodle
+npx skills add santunesigor/doodle --skill doodle
 ```
 
-**Manual** (qualquer agente que leia `~/.claude/skills`):
+A CLI instala no projeto atual por padrão. Para instalar globalmente em um agente, use:
+
+```bash
+npx skills add santunesigor/doodle --skill doodle --agent codex --global
+```
+
+Troque `codex` por `claude-code` ou `cursor` para esses agentes.
+
+**Manual (Codex):**
 
 ```bash
 git clone https://github.com/santunesigor/doodle
-cp -r doodle/skills/doodle ~/.claude/skills/
+mkdir -p ~/.agents/skills
+cp -R doodle/skills/doodle ~/.agents/skills/
 ```
 
-**Para testar uma cópia local antes de publicar:** crie um link em vez de copiar a pasta. Assim as suas edições
-valem na hora.
+Para o Claude Code, use `~/.claude/skills` como destino. Instale em uma pasta `doodle` nova para não mesclar os arquivos
+com uma cópia existente.
+
+**Para testar uma cópia local antes de publicar (Codex):** na raiz do repositório, crie um link em vez de copiar a pasta.
+Assim as suas edições valem na hora. Escolha entre a cópia acima e este link:
 
 ```bash
-ln -s /caminho/para/doodle/skills/doodle ~/.claude/skills/doodle
+mkdir -p ~/.agents/skills
+ln -s "$PWD/skills/doodle" ~/.agents/skills/doodle
 ```
 
-Abra uma sessão **nova** depois de instalar, porque as skills são carregadas quando a sessão começa. Para conferir,
-pergunte "quais skills você tem?". O `doodle` deve aparecer na lista.
+Se o agente não encontrar a skill depois da instalação, abra uma sessão **nova**. Para conferir, pergunte "quais skills
+você tem?". O `doodle` deve aparecer na lista. No Codex, você pode chamá-la com `$doodle`.
 
 ## 2. A sua primeira explicação
 
@@ -102,10 +115,12 @@ Você tem dois jeitos de mudar:
 - **Editar você mesmo:** mude o texto dentro do comentário e rode o renderizador de novo:
 
 ```bash
-python3 ~/.claude/skills/doodle/scripts/doodle.py como-o-dns-funciona.md
+python3 ~/.agents/skills/doodle/scripts/doodle.py como-o-dns-funciona.md
 ```
 
-Rodar de novo é sempre seguro. O comando redesenha todas as imagens do arquivo e não mexe no resto do texto.
+Esse caminho é o da instalação manual no Codex; para o Claude Code, use `~/.claude/skills`.
+O comando redesenha as imagens e preserva o texto ao redor. Specs ou caminhos de saída inválidos deixam o documento e as
+imagens existentes intactos. Se escolheu outra pasta de imagens com `-o`, repita a opção em cada renderização.
 
 ## 5. Escrever os seus próprios desenhos
 

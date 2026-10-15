@@ -21,24 +21,38 @@ Pick one of the following.
 **Codex, Cursor, Claude Code and other agents with skills support:**
 
 ```bash
-npx skills add santunesigor/doodle
+npx skills add santunesigor/doodle --skill doodle
 ```
 
-**Manual** (any agent that reads `~/.claude/skills`):
+The CLI installs into the current project by default. To install globally for one agent, use:
+
+```bash
+npx skills add santunesigor/doodle --skill doodle --agent codex --global
+```
+
+Replace `codex` with `claude-code` or `cursor` for those agents.
+
+**Manual (Codex):**
 
 ```bash
 git clone https://github.com/santunesigor/doodle
-cp -r doodle/skills/doodle ~/.claude/skills/
+mkdir -p ~/.agents/skills
+cp -R doodle/skills/doodle ~/.agents/skills/
 ```
 
-**Testing a local copy before publishing:** link the folder instead of copying it, so your edits show up right away.
+For Claude Code, use `~/.claude/skills` as the destination instead. Install into a new `doodle` folder to avoid merging
+with an existing copy.
+
+**Testing a local copy before publishing (Codex):** from the repository root, link the folder instead of copying it,
+so your edits show up right away. Choose either the copy above or this link:
 
 ```bash
-ln -s /path/to/doodle/skills/doodle ~/.claude/skills/doodle
+mkdir -p ~/.agents/skills
+ln -s "$PWD/skills/doodle" ~/.agents/skills/doodle
 ```
 
-Open a **new** session after installing, because skills are loaded when a session starts. To check, ask "which
-skills do you have?". You should see `doodle` in the list.
+If your agent doesn't discover the skill after installation, open a **new** session. To check, ask "which skills do
+you have?". You should see `doodle` in the list. In Codex, you can invoke it with `$doodle`.
 
 ## 2. Your first explanation
 
@@ -101,10 +115,12 @@ You have two ways to change it:
 - **Edit it yourself:** change the text inside the comment, then run the renderer again:
 
 ```bash
-python3 ~/.claude/skills/doodle/scripts/doodle.py how-dns-works.md
+python3 ~/.agents/skills/doodle/scripts/doodle.py how-dns-works.md
 ```
 
-Running it again is always safe. It redraws every picture in the file and doesn't touch the rest of your text.
+This path is for a manual Codex installation; for Claude Code, use `~/.claude/skills` instead.
+The command redraws the pictures and preserves the surrounding text. Invalid diagram specs or output paths leave the
+document and existing images unchanged. If you chose a custom image directory with `-o`, pass it again on every run.
 
 ## 5. Write your own diagrams
 

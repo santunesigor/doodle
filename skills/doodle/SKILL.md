@@ -1,13 +1,13 @@
 ---
 name: doodle
-description: Explains anything (a bug, a codebase flow, a protocol, a concept) to a beginner as a Markdown document with clean, friendly diagrams, using very few tokens. Use when the user asks to "explain with pictures/diagrams/drawings", "explain like I'm 5", "draw it", "make an illustrated explanation", "me explica com desenhos/imagens", or says they did not understand a text-only explanation.
+description: Explains bugs, code flows, protocols, and concepts to beginners in Markdown with SVG diagrams generated from small text specs. Use when the user asks for an explanation with diagrams or drawings, says "explain like I'm 5" or "me explica com desenhos", or wants an illustrated explanation after not understanding text alone.
 ---
 
 # Doodle: Diagrams Over Overly Dense Long Explanations
 
 You write **one Markdown file** where each drawing is a tiny ` ```doodle ` text block. Then one command turns every
-block into an SVG under `img/` and swaps the block for an image link. Never write SVG by hand, and never open the
-generated SVGs: that is where the token savings come from.
+block into an SVG under `img/` and swaps the block for an image link. Use the renderer instead of writing SVG by hand.
+Keep generated SVG markup out of context unless debugging the renderer; inspect a visual preview when needed.
 
 ## Workflow
 
@@ -18,6 +18,7 @@ generated SVGs: that is where the token savings come from.
 3. **Render:** `python3 <this-skill-dir>/scripts/doodle.py <topic-slug>.md`.
    It prints the SVG paths. On `error: ... line N`, fix that block and run again. Re-running is safe: rendered
    blocks are kept as `<!-- doodle ... -->` comments and re-rendered in place.
+   If using `-o <image-dir>`, pass the same directory on subsequent runs; SVG paths must stay inside that directory.
 4. **Reply briefly:** the file path plus 2–3 lines of summary. Don't paste the document into the chat.
 
 No Python? Use ` ```mermaid ` blocks instead (GitHub renders them) and skip step 3.
