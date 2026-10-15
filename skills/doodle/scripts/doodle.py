@@ -61,6 +61,7 @@ class Spec:
         self.theme = None  # set by '@theme NAME'
         self.rows = []  # (line number, raw line without trailing spaces)
         self.warnings = []  # (line number or None, message)
+        self.opt_lines = {}  # option -> line where it was written
 
 
 def tone_of(word):
@@ -89,13 +90,58 @@ def parse(src):
                     spec.theme = words[i + 1].lstrip("@").lower()
                 elif w and not (i and words[i - 1].lower() == "@theme"):
                     spec.opts.add(w)
+                    spec.opt_lines.setdefault(w, no)
         elif st == ">" or st.startswith("> "):
             spec.sub.append(st[1:].strip())
         else:
             spec.rows.append((no, line))
     if not spec.kind:
         raise DoodleError("empty spec: the first line must be 'kind: Title'")
+    lint(spec)
     return spec
+
+
+OPTIONS = {"sketch": KINDS, "vertical": ("timeline", "flow"), "horizontal": ("timeline", "flow"),
+           "arrow": ("compare", "stack", "hub")}
+MAX_ROWS = {"sequence": 12, "flow": 14, "compare": 12, "tree": 14}  # others: 8
+
+
+def lint(spec):
+    """Warnings for things that render but probably aren't what the author meant."""
+    warn = spec.warnings.append
+    for opt, no in sorted(spec.opt_lines.items(), key=lambda kv: kv[1]):
+        if opt not in OPTIONS:
+            warn((no, "unknown option '@%s'%s; options: %s, @theme NAME"
+                  % (opt, suggest(opt, OPTIONS), ", ".join("@" + o for o in OPTIONS))))
+        elif spec.kind not in OPTIONS[opt]:
+            warn((no, "'@%s' has no effect on %s" % (opt, spec.kind)))
+    if not spec.title:
+        warn((None, "no title; write 'kind: Title' so the image has alt text"))
+    rows = [r for r in spec.rows if not r[1].strip().startswith("##")]
+    if len(rows) > MAX_ROWS.get(spec.kind, 8):
+        warn((rows[0][0], "%d rows is a lot for one %s; consider splitting it into two diagrams"
+              % (len(rows), spec.kind)))
+    vocabulary = list(TONES) + list(ALIAS)
+    for no, line in spec.rows:
+        text = line.strip().lstrip("#").strip()
+        edge = split_edge(text) if spec.kind in ("flow", "sequence") else None
+        cellsrc = EDGE.match(text).group(3).partition(":")[2] if edge else text
+        parts = [p.strip() for p in cellsrc.split("|")]
+        if len(parts) > 1:
+            last = parts[-1].lower()
+            if not tone_of(last) and re.fullmatch(r"[a-z]{2,9}", last) and suggest(last, vocabulary):
+                warn((no, "'%s' is shown as a note; if it is a tone, write %s" % (
+                    parts[-1], suggest(last, vocabulary).split("'")[1])))
+        if edge:
+            words = len(edge[3].split())
+            if words > 10:
+                warn((no, "message has %d words; aim for 8 or fewer" % words))
+            continue
+        label, note, _tone = cells(re.sub(r"^\[[^\]]+\]\s*", "", text))
+        if len(label.split()) > 6:
+            warn((no, "label has %d words; aim for 4 or fewer (put details in the note)" % len(label.split())))
+        if len(note.split()) > 16:
+            warn((no, "note has %d words; aim for 12 or fewer" % len(note.split())))
 
 
 def cells(text):
@@ -248,9 +294,9 @@ THEMES = {
 SCHEMES = ("auto", "light", "dark")
 
 
-def suggest(word, options):
+def suggest(word, options, cutoff=0.6):
     import difflib
-    close = difflib.get_close_matches(word, list(options), 1, 0.6)
+    close = difflib.get_close_matches(word, list(options), 1, cutoff)
     return " (did you mean '%s'?)" % close[0] if close else ""
 
 
@@ -740,7 +786,7 @@ def draw_cycle(cv, spec):
     return right, bottom
 
 
-def resolve(ref, nodes, ids, byname):
+def resolve(ref, nodes, ids, byname, created=None):
     """Edge endpoint -> node index: [id], 1-based row number, label, or a new node."""
     key = ref.strip()
     if key in ids:
@@ -751,6 +797,8 @@ def resolve(ref, nodes, ids, byname):
         return byname[key.lower()]
     nodes.append(cells(key))
     byname[nodes[-1][0].lower()] = len(nodes) - 1
+    if created is not None:
+        created.append(key)
     return len(nodes) - 1
 
 
@@ -759,7 +807,7 @@ def draw_flow(cv, spec):
     for no, line in spec.rows:
         e = split_edge(line)
         if e:
-            edges.append(e)
+            edges.append((no,) + e)
         else:
             raw_nodes.append(line.strip())
     nodes, ids, byname = [], {}, {}
@@ -771,8 +819,15 @@ def draw_flow(cv, spec):
             ids[nid] = len(nodes) - 1
         byname.setdefault(nodes[-1][0].lower(), len(nodes) - 1)
     E = []
-    for a, b, dashed, label, tone in edges:
-        E.append((resolve(a, nodes, ids, byname), resolve(b, nodes, ids, byname), dashed, label, tone))
+    declared = len(nodes)
+    for no, a, b, dashed, label, tone in edges:
+        created = []
+        E.append((resolve(a, nodes, ids, byname, created), resolve(b, nodes, ids, byname, created),
+                  dashed, label, tone))
+        for key in created if declared else ():
+            known = list(ids) + [nd[0] for nd in nodes[:declared]]
+            spec.warnings.append((no, "'%s' matches no node, so a new box was created%s"
+                                  % (key, suggest(key, known) or "; use an [id], a row number or the exact label")))
     if not E:
         E = [(i, i + 1, False, "", "neutral") for i in range(len(nodes) - 1)]
     n = len(nodes)
@@ -889,9 +944,12 @@ def draw_sequence(cv, spec):
     actors, msgs = [], []
     index = {}
 
-    def actor(name, tone="neutral"):
+    def actor(name, tone="neutral", no=None):
         key = name.lower()
         if key not in index:
+            hint = suggest(name, [x["name"] for x in actors], .85) if no else ""
+            if hint:  # probably a typo of an existing actor
+                spec.warnings.append((no, "new actor '%s'%s" % (name, hint)))
             index[key] = len(actors)
             actors.append({"name": name, "tone": tone})
         return index[key]
@@ -900,7 +958,7 @@ def draw_sequence(cv, spec):
         e = split_edge(line)
         if e:
             a, b, dashed, label, tone = e
-            msgs.append((actor(a), actor(b), dashed, label, tone))
+            msgs.append((actor(a, no=no), actor(b, no=no), dashed, label, tone))
         else:
             label, note, tone = cells(line.strip())
             actor(label, tone)
@@ -1246,7 +1304,7 @@ def main(argv):
                 sys.stdout.write(svg)
         elif src.lower().endswith((".md", ".markdown")):
             rels = render_markdown(src, a.out or settings.get("imageDir") or "img", style, a.check, warnings)
-            for rel in rels:
+            for rel in rels if not a.check else ():
                 print(rel)
         else:
             with open(src, encoding="utf-8") as fh:

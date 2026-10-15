@@ -265,6 +265,75 @@ class MarkdownTest(unittest.TestCase):
                 doodle.render_markdown(md)
 
 
+class LintTest(unittest.TestCase):
+    def warnings(self, src):
+        return [m for _no, m in doodle.render(src)[0].warnings]
+
+    def test_clean_spec_has_no_warnings(self):
+        for src in blocks(DSL):
+            self.assertEqual(self.warnings(src), [], src)
+
+    def test_unknown_and_misplaced_options(self):
+        spec = doodle.parse("stack: S\n@arow @vertical\nA")
+        msgs = dict((m.split("'")[1], no) for no, m in spec.warnings)
+        self.assertIn("@arow", msgs)
+        self.assertEqual(msgs["@arow"], 2)
+        self.assertTrue(any("did you mean 'arrow'" in m for _n, m in spec.warnings))
+        self.assertTrue(any("'@vertical' has no effect on stack" in m for _n, m in spec.warnings))
+
+    def test_tone_typo(self):
+        ws = self.warnings("stack: S\nA | note | warnn")
+        self.assertTrue(any("write warn" in w for w in ws), ws)
+        self.assertEqual(self.warnings("stack: S\nA | note | lunch"), [])
+
+    def test_long_text_and_many_rows(self):
+        ws = self.warnings("stack: S\nOne two three four five six seven\n" + "X\n" * 8)
+        self.assertTrue(any("label has 7 words" in w for w in ws))
+        self.assertTrue(any("9 rows" in w for w in ws))
+
+    def test_flow_edge_typo_creates_node_with_warning(self):
+        spec, _ = doodle.render("flow: F\n[a] Start\n[b] Home\na -> Hom")
+        self.assertEqual(spec.warnings[0][0], 4)
+        self.assertIn("did you mean 'Home'", spec.warnings[0][1])
+        self.assertEqual(self.warnings("flow: F\nA -> B"), [])  # no declared nodes: creating is the intent
+
+    def test_sequence_actor_typo(self):
+        ws = self.warnings("sequence: S\nBrowser -> Server: hi\nBrowsr -> Server: again")
+        self.assertTrue(any("did you mean 'Browser'" in w for w in ws), ws)
+
+    def test_markdown_warnings_point_at_document_lines(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            md = os.path.join(tmp, "t.md")
+            with open(md, "w", encoding="utf-8") as fh:
+                fh.write("# T\n\n```doodle\nstack: S\nA | x | okk\n```\n\n<!-- doodle\nstack: R\n@arow\nB\n-->\n"
+                         "![R](img/t-r.svg)\n")
+            warnings = []
+            doodle.render_markdown(md, warnings=warnings)
+            self.assertEqual([w.split(":")[1] for w in warnings], ["5", "10"])
+
+    def test_check_writes_nothing(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            md = os.path.join(tmp, "t.md")
+            text = "```doodle\nstack: S\nA\n```\n"
+            with open(md, "w", encoding="utf-8") as fh:
+                fh.write(text)
+            self.assertEqual(cli([md, "--check"]), 0)
+            with open(md, encoding="utf-8") as fh:
+                self.assertEqual(fh.read(), text)
+            self.assertEqual(os.listdir(tmp), ["t.md"])
+            with open(md, "w", encoding="utf-8") as fh:
+                fh.write("```doodle\npie: S\n```\n")
+            self.assertEqual(cli([md, "--check"]), 1)
+
+    def test_error_lines_point_at_document_lines(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            md = os.path.join(tmp, "t.md")
+            with open(md, "w", encoding="utf-8") as fh:
+                fh.write("# T\n\n```doodle\n// draft\npie: S\n```\n")
+            with self.assertRaisesRegex(doodle.DoodleError, r"t\.md:5: unknown kind 'pie'"):
+                doodle.render_markdown(md)
+
+
 class StyleTest(unittest.TestCase):
     def test_every_theme_renders_valid_svg(self):
         for name in doodle.THEMES:
