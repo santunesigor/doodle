@@ -13,7 +13,8 @@ import doodle  # noqa: E402
 ROOT = os.path.join(HERE, "..")
 DSL = os.path.join(ROOT, "skills", "doodle", "references", "dsl.md")
 DOCS = [os.path.join(ROOT, "docs", n) for n in ("tutorial.md", "tutorial.pt-BR.md")] + [
-    os.path.join(ROOT, "skills", "doodle", "SKILL.md")]
+    os.path.join(ROOT, "skills", "doodle", "SKILL.md"),
+    os.path.join(ROOT, "README.md"), os.path.join(ROOT, "README.pt-BR.md")]
 
 
 def blocks(path):
