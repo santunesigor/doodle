@@ -1,4 +1,4 @@
-<h1 align="center">🖍️ Doodle</h1>
+<h1 align="center">Doodle</h1>
 
 <p align="center"><sub><strong>D</strong>iagrams <strong>O</strong>ver <strong>O</strong>verly <strong>D</strong>ense <strong>L</strong>ong <strong>E</strong>xplanations<br>Desenhos no lugar de explicações longas e densas.</sub></p>
 
@@ -20,7 +20,9 @@
 Doodle é uma [Agent Skill](https://agentskills.io/) para **Claude Code, Codex, Cursor e outros agentes compatíveis**.
 Explica bugs, fluxos de código, protocolos e conceitos em um documento Markdown para iniciantes, no seu idioma.
 
-![Comparação entre merge e rebase gerada pelo Doodle](examples/git-rebase/img/git-rebase-pt-br-merge-ou-rebase.svg)
+<p align="center">
+  <img src="examples/git-rebase/img/git-rebase-pt-br-merge-ou-rebase.svg" alt="Comparação entre merge e rebase gerada pelo Doodle">
+</p>
 
 ## Instalação
 
@@ -136,7 +138,9 @@ Veja as opções e um exemplo de cada tipo na [referência de sintaxe](skills/do
 | [Por que o git rebase “reescreve a história”?](examples/git-rebase/git-rebase-pt-br.md) | Português | Timeline, compare, flow |
 | [How does my browser find a website?](examples/dns/how-dns-works.md) | English | Tree, sequence, stack, cycle |
 
-![O que o git rebase main faz, passo a passo](examples/git-rebase/img/git-rebase-pt-br-o-que-o-git-rebase-main-faz.svg)
+<p align="center">
+  <img src="examples/git-rebase/img/git-rebase-pt-br-o-que-o-git-rebase-main-faz.svg" alt="O que o git rebase main faz, passo a passo">
+</p>
 
 ## Rodar sem agente
 
