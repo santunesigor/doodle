@@ -787,6 +787,7 @@ FENCE_LINE = re.compile(r"^ {0,3}(`{3,}|~{3,})\s*([^`\s]*)")
 def segments(md):
     """Split markdown into ('text'|'code'|'doodle', content) so code examples are never touched."""
     out, buf, fence, kind = [], [], None, None
+    opening = ""
     for line in md.splitlines(keepends=True):
         m = FENCE_LINE.match(line)
         if fence is None:
@@ -794,6 +795,7 @@ def segments(md):
                 if buf:
                     out.append(("text", "".join(buf)))
                 fence, kind = m.group(1), "doodle" if m.group(2).lower() == "doodle" else "code"
+                opening = line
                 buf = [] if kind == "doodle" else [line]
             else:
                 buf.append(line)
@@ -804,6 +806,8 @@ def segments(md):
             buf, fence, kind = [], None, None
         else:
             buf.append(line)
+    if fence and kind == "doodle":
+        buf.insert(0, opening)
     if buf:
         out.append(("code" if fence else "text", "".join(buf)))
     return out
@@ -820,9 +824,10 @@ def render_markdown(path, img_dir=None):
         md = fh.read()
     base = os.path.dirname(os.path.abspath(path))
     rel_dir = img_dir or "img"
+    output_root = os.path.realpath(os.path.join(base, rel_dir))
     stem = slug(os.path.splitext(os.path.basename(path))[0])
     used = {p for kind, chunk in segments(md) if kind == "text" for p in DONE_PATHS(chunk)}
-    errors, written = [], []
+    errors, pending = [], []
 
     def emit(src, rel):
         try:
@@ -836,11 +841,11 @@ def render_markdown(path, img_dir=None):
             while rel in used:
                 rel, k = "%s/%s-%d.svg" % (rel_dir, name, k), k + 1
             used.add(rel)
-        out = os.path.join(base, rel)
-        os.makedirs(os.path.dirname(out), exist_ok=True)
-        with open(out, "w", encoding="utf-8") as fh:
-            fh.write(svg)
-        written.append(rel)
+        out = os.path.realpath(os.path.join(base, rel))
+        if os.path.commonpath([output_root, out]) != output_root or not out.lower().endswith(".svg"):
+            errors.append("%s: SVG output must stay inside '%s'" % (rel, rel_dir))
+            return None
+        pending.append((out, svg, rel))
         block_src = src.strip("\n").replace("-->", "- ->")
         return "<!-- doodle\n%s\n-->\n![%s](%s)" % (block_src, (spec.title or spec.kind).replace("]", ")"), rel)
 
@@ -859,9 +864,13 @@ def render_markdown(path, img_dir=None):
     md = "".join(parts)
     if errors:
         raise DoodleError("\n".join(errors))
+    for out, svg, _rel in pending:
+        os.makedirs(os.path.dirname(out), exist_ok=True)
+        with open(out, "w", encoding="utf-8") as fh:
+            fh.write(svg)
     with open(path, "w", encoding="utf-8") as fh:
         fh.write(md)
-    return written
+    return [rel for _out, _svg, rel in pending]
 
 
 def DONE_PATHS(md):

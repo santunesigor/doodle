@@ -177,6 +177,83 @@ class MarkdownTest(unittest.TestCase):
             with open(md, encoding="utf-8") as fh:
                 self.assertEqual(fh.read(), text)
 
+    def test_unclosed_fences_are_preserved(self):
+        for tail in ("```doodle", "```doodle\n", "  ~~~~doodle\nstack: Draft\nA\n"):
+            with self.subTest(tail=tail), tempfile.TemporaryDirectory() as tmp:
+                md = os.path.join(tmp, "draft.md")
+                text = "# Draft\n\n" + tail
+                with open(md, "w", encoding="utf-8") as fh:
+                    fh.write(text)
+                self.assertEqual(doodle.render_markdown(md), [])
+                with open(md, encoding="utf-8") as fh:
+                    self.assertEqual(fh.read(), text)
+
+    def test_invalid_block_leaves_existing_images_untouched(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            md = os.path.join(tmp, "topic.md")
+            with open(md, "w", encoding="utf-8") as fh:
+                fh.write("```doodle\nstack: Valid\nOriginal\n```\n")
+            rel = doodle.render_markdown(md)[0]
+            svg = os.path.join(tmp, rel)
+            with open(svg, encoding="utf-8") as fh:
+                original_svg = fh.read()
+            with open(md, encoding="utf-8") as fh:
+                text = fh.read().replace("Original", "Changed")
+            text += "\n```doodle\nstack: New\nA\n```\n\n```doodle\ninvalid: Bad\n```\n"
+            with open(md, "w", encoding="utf-8") as fh:
+                fh.write(text)
+            with self.assertRaises(doodle.DoodleError):
+                doodle.render_markdown(md)
+            with open(md, encoding="utf-8") as fh:
+                self.assertEqual(fh.read(), text)
+            with open(svg, encoding="utf-8") as fh:
+                self.assertEqual(fh.read(), original_svg)
+            self.assertEqual(os.listdir(os.path.join(tmp, "img")), [os.path.basename(svg)])
+
+    def test_existing_comments_cannot_overwrite_other_files(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            md = os.path.join(tmp, "topic.md")
+            os.mkdir(os.path.join(tmp, "img"))
+            targets = ["outside.svg", "img/../outside.svg", "img/../img-other/outside.svg",
+                       "img/notes.md", os.path.join(tmp, "absolute.svg")]
+            for rel in targets:
+                with self.subTest(path=rel):
+                    text = "<!-- doodle\nstack: Example\nA\n-->\n![Example](%s)\n" % rel
+                    with open(md, "w", encoding="utf-8") as fh:
+                        fh.write(text)
+                    with self.assertRaisesRegex(doodle.DoodleError, "SVG output must stay inside"):
+                        doodle.render_markdown(md)
+                    with open(md, encoding="utf-8") as fh:
+                        self.assertEqual(fh.read(), text)
+            self.assertCountEqual(os.listdir(tmp), ["img", "topic.md"])
+
+    @unittest.skipUnless(hasattr(os, "symlink"), "symlinks are unavailable")
+    def test_existing_comments_cannot_follow_symlinks_outside_image_dir(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            os.mkdir(os.path.join(tmp, "img"))
+            target = os.path.join(tmp, "outside.svg")
+            with open(target, "w", encoding="utf-8") as fh:
+                fh.write("keep this")
+            os.symlink(target, os.path.join(tmp, "img", "linked.svg"))
+            md = os.path.join(tmp, "topic.md")
+            with open(md, "w", encoding="utf-8") as fh:
+                fh.write("<!-- doodle\nstack: Example\nA\n-->\n![Example](img/linked.svg)\n")
+            with self.assertRaises(doodle.DoodleError):
+                doodle.render_markdown(md)
+            with open(target, encoding="utf-8") as fh:
+                self.assertEqual(fh.read(), "keep this")
+
+    def test_custom_image_directory_can_be_rerendered(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            md = os.path.join(tmp, "topic.md")
+            with open(md, "w", encoding="utf-8") as fh:
+                fh.write("```doodle\nstack: Custom\nA\n```\n")
+            expected = ["assets/diagrams/topic-custom.svg"]
+            self.assertEqual(doodle.render_markdown(md, "assets/diagrams"), expected)
+            self.assertEqual(doodle.render_markdown(md, "assets/diagrams"), expected)
+            with self.assertRaises(doodle.DoodleError):
+                doodle.render_markdown(md)
+
 
 if __name__ == "__main__":
     unittest.main()
