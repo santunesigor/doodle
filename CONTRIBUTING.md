@@ -23,6 +23,7 @@ To try the skill in your agent without copying it, follow the local installation
 | Codex display metadata | `skills/doodle/agents/openai.yaml` |
 | Parser, layout, SVG output, Markdown handling | `skills/doodle/scripts/doodle.py` |
 | Syntax and options | `skills/doodle/references/dsl.md` |
+| Themes and `doodle.json` settings | `THEMES` and `DEFAULTS` in `doodle.py`, documented in `skills/doodle/references/customize.md` |
 | Regression tests | `tests/test_doodle.py` |
 | Finished explanations | `examples/<topic>/` with images in `img/` |
 | User documentation | `README*.md` and `docs/tutorial*.md` |
@@ -37,12 +38,15 @@ information before sharing examples.
 
 Keep changes focused. Preserve the renderer's Python 3.8 compatibility and standard-library-only runtime.
 Add a regression test for a parser or rendering bug; for visual changes, include a before/after preview.
+A new theme needs light and dark palettes (or `dark=None` for a fixed look), a row in `customize.md`, and a section in
+`examples/themes/themes.md`; the tests check that the docs list every theme, kind and setting.
 Keep English and Portuguese user docs aligned when changing installation or usage.
 
 Before submitting:
 
 ```bash
 python3 -m unittest discover -s tests -v
+python3 skills/doodle/scripts/doodle.py --check examples/dns/how-dns-works.md
 git diff --check
 ```
 

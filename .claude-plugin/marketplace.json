@@ -5,12 +5,12 @@
   },
   "metadata": {
     "description": "Doodle: explain anything with friendly diagrams in Markdown, using very few tokens",
-    "version": "0.1.0"
+    "version": "0.2.0"
   },
   "plugins": [
     {
       "name": "doodle",
-      "description": "Explains bugs, code flows and concepts to beginners as a Markdown document with clean SVG diagrams generated from tiny text specs",
+      "description": "Explains bugs, code flows and concepts as a Markdown document with SVG diagrams generated from tiny text specs, adapted to the reader, with themes and saved preferences",
       "source": "./",
       "strict": false,
       "skills": [

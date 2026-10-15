@@ -87,10 +87,15 @@ See finished results in [examples/dns](../examples/dns/how-dns-works.md) and
 | A specific language | "Me explica com desenhos, em português." (the reply follows your language anyway) |
 | A specific file name or place | "…and save it in `docs/explanations/`." |
 | A hand-drawn look | "…use the sketch style." |
+| A different reader | "…for a 10-year-old." / "…for senior engineers, skip the basics." |
+| More or less detail | "Quick version, please." / "Go deep, and quiz me at the end." |
+| Another look | "…with the chalk theme." / "…in our brand purple, #6d28d9." |
+| The same, every time | "From now on, always explain for developers with the clean theme." (saved in `doodle.json`) |
 
 ## 3. Every document has the same shape
 
-Doodle writes in a fixed order, built to make things click:
+Doodle writes in a fixed order, built to make things click. A `quick` explanation keeps only the first part and one
+or two drawings; a `deep` one adds "Common mistakes" and a short "Check yourself" quiz.
 
 1. **In three sentences:** the main idea, how it works, and why it matters (or what fixes the problem).
 2. **Pieces you need to know:** a short table when there are at least three unfamiliar terms.
@@ -123,7 +128,8 @@ python3 ~/.agents/skills/doodle/scripts/doodle.py how-dns-works.md
 This path is for a manual Codex installation; for a manual Claude Code copy, use `~/.claude/skills` instead.
 If you installed through the plugin marketplace, ask the agent to rerender the document; its plugin folder may differ.
 The command redraws the pictures and preserves the surrounding text. Invalid diagram specs or output paths leave the
-document and existing images unchanged. If you chose a custom image directory with `-o`, pass it again on every run.
+document and existing images unchanged. If you chose a custom image directory with `-o`, pass it again on every run,
+or set `imageDir` in `doodle.json` once (see [section 6](#6-make-it-yours)).
 
 ## 5. Write your own diagrams
 
@@ -155,6 +161,8 @@ Delivered | still hot | ok
 | Where is it? What is inside what? | `tree` |
 | What sits on top of what? | `stack` |
 | Who talks to whom? | `sequence` |
+| How much? How long? | `bars` |
+| What is it made of? | `hub` |
 
 ### One small example of each
 
@@ -213,6 +221,22 @@ Review asks for changes | warn
 Fix and push | ok
 ```
 
+```doodle
+bars: Build time by step
+Install | 40 s
+Tests | 95 s | warn
+Bundle | 25 s | ok
+```
+
+```doodle
+hub: What a commit holds
+Commit | info
+Snapshot | every file, as it was
+Parent | the commit before
+Author | who and when
+Message | why it changed
+```
+
 The full syntax, with every option, is in [skills/doodle/references/dsl.md](../skills/doodle/references/dsl.md).
 
 ### Options
@@ -221,7 +245,8 @@ Add them on their own line, right after the title:
 
 - `@sketch` gives a hand-drawn look.
 - `@vertical` or `@horizontal` forces the direction of a `timeline` or `flow`.
-- `@arrow` draws arrows between `compare` columns or `stack` layers.
+- `@arrow` draws arrows between `compare` columns, `stack` layers, or out of a `hub` center.
+- `@theme chalk` draws this one diagram in another theme.
 
 ### Rendering a single diagram
 
@@ -237,17 +262,51 @@ printf '%s\n' 'stack: Hi' 'A' 'B' | python3 skills/doodle/scripts/doodle.py - > 
 
 These create `pizza.svg`, `out.svg`, and `hi.svg`. Open an SVG in your browser to view it.
 To render a Markdown file, use the same command with its `.md` path; the command updates that file in place.
+Add `--check` to only validate: nothing is written, and the renderer lists errors and warnings with line numbers.
 
-## 6. Troubleshooting
+## 6. Make it yours
+
+Doodle reads its preferences from `doodle.json`. Create one in your project with:
+
+```bash
+python3 skills/doodle/scripts/doodle.py --init
+```
+
+Then edit the values you care about. Everything is optional:
+
+```json
+{
+  "theme": "candy",
+  "audience": "kid",
+  "depth": "quick",
+  "language": "pt-BR",
+  "notes": "Use soccer metaphors."
+}
+```
+
+- **How it draws:** `theme` (`paper`, `clean`, `candy`, `blueprint`, `chalk`), `sketch`, `colors` (one `#hex` per
+  tone), `scheme` (`auto`, `light`, `dark`) and `imageDir`. Try them with `--theme NAME`, or see them side by side in
+  the [theme gallery](../examples/themes/themes.md).
+- **How it writes:** `audience` (`kid`, `beginner`, `developer`, `expert`), `depth` (`quick`, `standard`, `deep`),
+  `language`, `docsDir` (where new explanations go) and `notes` (your house rules, in plain words).
+
+Doodle looks for the nearest `doodle.json` from the document's folder up to the repository root. Defaults for all
+your projects go in `~/.config/doodle/config.json`. Run `doodle.py --settings` to see what is in effect.
+You don't have to edit JSON yourself: tell the agent "from now on, always…" and it saves the preference.
+Every setting is described in [customize.md](../skills/doodle/references/customize.md).
+
+## 7. Troubleshooting
 
 | Problem | Fix |
 |---|---|
-| `error: line 3: unknown kind 'pie'` | The first line must start with one of the 7 kinds. |
+| `error: notes.md:3: unknown kind 'pie'` | The first line must start with one of the 9 kinds. |
 | `error: cycle needs at least 2 rows` | Add rows, or pick another kind. |
+| `warning: … 'Hom' matches no node` | A flow edge names a box that doesn't exist, so a new one was drawn. Fix the name or use the `[id]`. |
+| `warning: … 'warnn' is shown as a note` | A misspelled tone. Fix the spelling. |
 | A note became a tone | A last cell that is exactly a tone word (`ok`, `bad`…) becomes the tone. Rephrase it, e.g. `status \| all good`. |
 | A box is too tall | Keep labels to 4 words or fewer and notes to 12 words or fewer, or split the idea into two drawings. |
 | Pictures don't show up on GitHub | Commit the `img/` folder together with the `.md` file. |
 | No Python on the machine | The agent writes ` ```mermaid ` blocks instead. GitHub renders them too, with a plainer look. |
 | `npx: command not found` | Install Node.js, or choose the native plugin/manual installation option. |
-| `SVG output must stay inside 'img'` | If you previously used `-o assets/diagrams`, pass that same option again. Keep image links inside the selected directory. |
+| `SVG output must stay inside 'img'` | If you previously used `-o assets/diagrams`, pass that same option again, or set `imageDir` in `doodle.json`. Keep image links inside the selected directory. |
 | The skill isn't used | Start a new session after installing, or ask explicitly: "use the doodle skill". |

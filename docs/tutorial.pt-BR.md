@@ -87,10 +87,15 @@ Veja resultados prontos em [examples/git-rebase](../examples/git-rebase/git-reba
 | Um idioma específico | "Explain it with drawings, in English." (a resposta já segue o idioma em que você escreve) |
 | Um nome ou lugar para o arquivo | "…e salva em `docs/explicacoes/`." |
 | Visual de desenho à mão | "…usa o estilo sketch." |
+| Outro leitor | "…para uma criança de 10 anos." / "…para devs seniores, pula o básico." |
+| Mais ou menos detalhe | "Versão rápida, por favor." / "Vai a fundo e me faz um quiz no final." |
+| Outro visual | "…com o tema chalk." / "…no roxo da nossa marca, #6d28d9." |
+| Sempre do mesmo jeito | "De agora em diante, explica sempre para devs com o tema clean." (fica salvo no `doodle.json`) |
 
 ## 3. Todo documento tem o mesmo formato
 
-O Doodle escreve sempre na mesma ordem, pensada para a ficha cair:
+O Doodle escreve sempre na mesma ordem, pensada para a ficha cair. Uma explicação `quick` fica só com a primeira parte
+e um ou dois desenhos; uma `deep` acrescenta "Erros comuns" e um quiz curto para você se testar.
 
 1. **Em três frases:** a ideia principal, como funciona e por que importa (ou o que resolve o problema).
 2. **Peças que você precisa conhecer:** uma tabela curta quando houver pelo menos três termos novos.
@@ -123,7 +128,8 @@ python3 ~/.agents/skills/doodle/scripts/doodle.py como-o-dns-funciona.md
 Esse caminho é o da instalação manual no Codex; para uma cópia manual no Claude Code, use `~/.claude/skills`.
 Se instalou pelo marketplace de plugins, peça ao agente para renderizar o documento de novo; a pasta do plugin pode ser outra.
 O comando redesenha as imagens e preserva o texto ao redor. Specs ou caminhos de saída inválidos deixam o documento e as
-imagens existentes intactos. Se escolheu outra pasta de imagens com `-o`, repita a opção em cada renderização.
+imagens existentes intactos. Se escolheu outra pasta de imagens com `-o`, repita a opção em cada renderização,
+ou defina `imageDir` uma vez no `doodle.json` (veja a [seção 6](#6-do-seu-jeito)).
 
 ## 5. Escrever os seus próprios desenhos
 
@@ -156,6 +162,8 @@ Entregue | ainda quente | ok
 | Onde fica? O que está dentro do quê? | `tree` |
 | O que fica em cima do quê? | `stack` |
 | Quem conversa com quem? | `sequence` |
+| Quanto? Quanto tempo? | `bars` |
+| Do que isso é feito? | `hub` |
 
 ### Um exemplo pequeno de cada
 
@@ -214,6 +222,22 @@ Revisão pede mudanças | warn
 Corrige e envia | ok
 ```
 
+```doodle
+bars: Tempo de build por etapa
+Instalar | 40 s
+Testes | 95 s | warn
+Empacotar | 25 s | ok
+```
+
+```doodle
+hub: O que um commit guarda
+Commit | info
+Foto dos arquivos | todos, como estavam
+Pai | o commit anterior
+Autor | quem e quando
+Mensagem | por que mudou
+```
+
 A sintaxe completa, com todas as opções, está em
 [skills/doodle/references/dsl.md](../skills/doodle/references/dsl.md) (em inglês).
 
@@ -223,7 +247,8 @@ Coloque cada opção numa linha própria, logo depois do título:
 
 - `@sketch` dá cara de desenho à mão.
 - `@vertical` ou `@horizontal` força a direção de um `timeline` ou `flow`.
-- `@arrow` desenha setas entre as colunas do `compare` ou as camadas do `stack`.
+- `@arrow` desenha setas entre as colunas do `compare`, as camadas do `stack` ou a partir do centro de um `hub`.
+- `@theme chalk` desenha só esse desenho em outro tema.
 
 ### Renderizar um desenho sozinho
 
@@ -239,17 +264,51 @@ printf '%s\n' 'stack: Oi' 'A' 'B' | python3 skills/doodle/scripts/doodle.py - > 
 
 Isso cria `pizza.svg`, `saida.svg` e `oi.svg`. Abra um SVG no navegador para ver o desenho.
 Para renderizar Markdown, use o mesmo comando com o caminho do `.md`; o comando altera o próprio arquivo.
+Acrescente `--check` para só validar: nada é gravado, e o renderizador lista erros e avisos com o número da linha.
 
-## 6. Problemas comuns
+## 6. Do seu jeito
+
+O Doodle lê as suas preferências de um `doodle.json`. Crie um no seu projeto com:
+
+```bash
+python3 skills/doodle/scripts/doodle.py --init
+```
+
+Depois mude só o que importa para você. Tudo é opcional:
+
+```json
+{
+  "theme": "candy",
+  "audience": "kid",
+  "depth": "quick",
+  "language": "pt-BR",
+  "notes": "Use metáforas de futebol."
+}
+```
+
+- **Como desenha:** `theme` (`paper`, `clean`, `candy`, `blueprint`, `chalk`), `sketch`, `colors` (uma cor `#hex`
+  por tom), `scheme` (`auto`, `light`, `dark`) e `imageDir`. Experimente com `--theme NOME`, ou veja todos lado a lado
+  na [galeria de temas](../examples/themes/themes.md).
+- **Como escreve:** `audience` (`kid`, `beginner`, `developer`, `expert`), `depth` (`quick`, `standard`, `deep`),
+  `language`, `docsDir` (onde salvar as explicações novas) e `notes` (as regras da casa, em palavras normais).
+
+O Doodle procura o `doodle.json` mais próximo, da pasta do documento até a raiz do repositório. Padrões para todos os
+seus projetos ficam em `~/.config/doodle/config.json`. Rode `doodle.py --settings` para ver o que está valendo.
+Você não precisa editar JSON: diga ao agente "de agora em diante, sempre…" e ele salva a preferência.
+Todas as configurações estão em [customize.md](../skills/doodle/references/customize.md) (em inglês).
+
+## 7. Problemas comuns
 
 | Problema | Solução |
 |---|---|
-| `error: line 3: unknown kind 'pizza'` | A primeira linha precisa começar com um dos 7 tipos, em inglês. |
+| `error: notas.md:3: unknown kind 'pizza'` | A primeira linha precisa começar com um dos 9 tipos, em inglês. |
 | `error: cycle needs at least 2 rows` | Acrescente linhas ou escolha outro tipo. |
+| `warning: … 'Hom' matches no node` | Uma seta do `flow` cita uma caixa que não existe, então uma nova foi criada. Corrija o nome ou use o `[id]`. |
+| `warning: … 'warnn' is shown as a note` | Um tom digitado errado. Corrija a grafia. |
 | Uma nota virou um tom | A última célula que é exatamente uma palavra de tom (`ok`, `bad`…) vira o tom. Reescreva, por exemplo `status \| tudo certo`. |
 | Uma caixa ficou alta demais | Use rótulos de até 4 palavras e notas de até 12, ou divida a ideia em dois desenhos. |
 | As imagens não aparecem no GitHub | Faça commit da pasta `img/` junto com o `.md`. |
 | Não tem Python na máquina | O agente escreve blocos ` ```mermaid ` no lugar. O GitHub também mostra esses blocos, com visual mais simples. |
 | `npx: command not found` | Instale Node.js ou escolha a instalação por plugin nativo/manual. |
-| `SVG output must stay inside 'img'` | Se usou `-o assets/diagrams` antes, repita a opção. Mantenha os links das imagens dentro da pasta escolhida. |
+| `SVG output must stay inside 'img'` | Se usou `-o assets/diagrams` antes, repita a opção, ou defina `imageDir` no `doodle.json`. Mantenha os links das imagens dentro da pasta escolhida. |
 | A skill não é usada | Abra uma sessão nova depois de instalar, ou peça direto: "usa a skill doodle". |
