@@ -1,5 +1,7 @@
 <h1 align="center">🖍️ Doodle</h1>
 
+<p align="center"><sub><strong>D</strong>iagrams <strong>O</strong>ver <strong>O</strong>verly <strong>D</strong>ense <strong>L</strong>ong <strong>E</strong>xplanations<br>Desenhos no lugar de explicações longas e densas.</sub></p>
+
 <p align="center"><strong>Transforme “não entendi” em um desenho.</strong></p>
 <p align="center">Explicações ilustradas para agentes de IA. Poucas linhas de texto. Diagramas SVG fáceis de entender.</p>
 
@@ -96,7 +98,6 @@ Abra a prévia do Markdown no editor ou faça commit do documento e das imagens 
 
 ## Como funciona
 
-O nome significa **Diagrams Over Overly Dense Long Explanations**: desenhos no lugar de explicações longas e densas.
 O agente escreve uma especificação curta do desenho, em vez de código SVG:
 
 ```doodle

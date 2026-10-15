@@ -1,5 +1,7 @@
 <h1 align="center">🖍️ Doodle</h1>
 
+<p align="center"><sub><strong>D</strong>iagrams <strong>O</strong>ver <strong>O</strong>verly <strong>D</strong>ense <strong>L</strong>ong <strong>E</strong>xplanations</sub></p>
+
 <p align="center"><strong>Turn “I don't get it” into a picture.</strong></p>
 <p align="center">Illustrated explanations for AI coding agents. Small text specs. Friendly SVG diagrams.</p>
 
@@ -96,7 +98,6 @@ Open the Markdown preview in your editor, or commit the document and its images 
 
 ## How it works
 
-The name stands for **Diagrams Over Overly Dense Long Explanations**.
 The agent writes a small diagram spec instead of SVG markup:
 
 ```doodle
