@@ -1,0 +1,44 @@
+{
+  "$schema": "https://json-schema.org/draft-07/schema#",
+  "$id": "https://raw.githubusercontent.com/santunesigor/doodle/main/skills/doodle/references/doodle.schema.json",
+  "title": "Doodle settings",
+  "description": "Settings for the Doodle skill: how explanations look and read. See references/customize.md.",
+  "type": "object",
+  "additionalProperties": false,
+  "definitions": {
+    "hex": {"type": "string", "pattern": "^#([0-9a-fA-F]{3}){1,2}$"},
+    "colors": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "neutral": {"$ref": "#/definitions/hex", "description": "Default boxes"},
+        "info": {"$ref": "#/definitions/hex", "description": "Actors and inputs"},
+        "ok": {"$ref": "#/definitions/hex", "description": "The healthy path or the fix"},
+        "bad": {"$ref": "#/definitions/hex", "description": "The broken part"},
+        "warn": {"$ref": "#/definitions/hex", "description": "The risky step"},
+        "bg": {"$ref": "#/definitions/hex", "description": "Background"},
+        "line": {"$ref": "#/definitions/hex", "description": "Guides and the frame border"},
+        "ink": {"$ref": "#/definitions/hex", "description": "Text"},
+        "mut": {"$ref": "#/definitions/hex", "description": "Notes and subtitles"},
+        "edge": {"$ref": "#/definitions/hex", "description": "Arrows"},
+        "on": {"$ref": "#/definitions/hex", "description": "Text on filled badges"}
+      }
+    }
+  },
+  "properties": {
+    "$schema": {"type": "string"},
+    "theme": {"enum": ["paper", "clean", "candy", "blueprint", "chalk"], "default": "paper"},
+    "sketch": {"type": ["boolean", "null"], "description": "Hand-drawn look; unset lets the theme decide"},
+    "scheme": {"enum": ["auto", "light", "dark"], "default": "auto"},
+    "frame": {"type": "boolean", "default": true, "description": "Draw the background card"},
+    "font": {"type": "string", "description": "A CSS font-family list"},
+    "colors": {"$ref": "#/definitions/colors"},
+    "darkColors": {"$ref": "#/definitions/colors"},
+    "imageDir": {"type": "string", "default": "img", "description": "SVG folder, relative to the document"},
+    "audience": {"enum": ["kid", "beginner", "developer", "expert"], "default": "beginner"},
+    "depth": {"enum": ["quick", "standard", "deep"], "default": "standard"},
+    "language": {"type": "string", "default": "auto", "description": "auto = the user's language"},
+    "docsDir": {"type": "string", "description": "Folder for new explanations, relative to the project root"},
+    "notes": {"type": "string", "description": "House rules for the writer, in plain words"}
+  }
+}

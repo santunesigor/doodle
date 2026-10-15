@@ -930,7 +930,8 @@ def draw_flow(cv, spec):
         cv.arrow(d, dashed, tone)
         if lab:
             forward = not (k in back or a == b)
-            cv.label(lx, ly, lab, 170 if vertical else gap_main - 8, up=forward and not vertical and ly < y2)
+            room = 170 if vertical or not forward else gap_main - 8  # loops run under the diagram: wide room
+            cv.label(lx, ly, lab, room, up=forward and not vertical and ly < y2)
     for c in nodes:
         c.draw()
     if any(k in back or E[k][0] == E[k][1] for k in range(len(E))):
@@ -1205,9 +1206,11 @@ def style_from(settings):
                  colors=settings.get("colors"), dark_colors=settings.get("darkColors"))
 
 
+SCHEMA_URL = ("https://raw.githubusercontent.com/santunesigor/doodle/main/skills/doodle/references/"
+              "doodle.schema.json")
 STARTER = {
+    "$schema": SCHEMA_URL,
     "theme": "paper",
-    "sketch": False,
     "scheme": "auto",
     "colors": {},
     "imageDir": "img",

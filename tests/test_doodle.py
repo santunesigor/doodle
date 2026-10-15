@@ -392,6 +392,12 @@ class DocsInSyncTest(unittest.TestCase):
             self.assertIn("| `%s` |" % theme, custom)
         for key in doodle.DEFAULTS:
             self.assertIn("| `%s` |" % key, custom)
+        with open(os.path.join(ROOT, "skills", "doodle", "references", "doodle.schema.json"), encoding="utf-8") as fh:
+            schema = json.load(fh)
+        self.assertEqual(set(schema["properties"]) - {"$schema"}, set(doodle.DEFAULTS))
+        self.assertEqual(schema["properties"]["theme"]["enum"], list(doodle.THEMES))
+        self.assertEqual(set(schema["definitions"]["colors"]["properties"]), set(doodle.TONES + doodle.BASE_KEYS))
+        self.assertTrue(doodle.SCHEMA_URL.endswith("references/doodle.schema.json"))
         for choice in doodle.CHOICES["audience"] + doodle.CHOICES["depth"]:
             self.assertIn("`%s`" % choice, skill)
 

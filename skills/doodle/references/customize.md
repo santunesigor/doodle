@@ -36,7 +36,8 @@ doodle.py --themes      # list the themes
 | `docsDir` | folder for new explanations, relative to the project root | current folder | agent |
 | `notes` | free-text house rules for the writer | `""` | agent |
 
-Unknown keys produce a warning with a suggestion, so typos don't fail silently.
+Unknown keys produce a warning with a suggestion, so typos don't fail silently. Files made with `--init` point to
+[doodle.schema.json](doodle.schema.json), so editors like VS Code autocomplete and check every key.
 
 ## Themes
 
