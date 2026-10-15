@@ -27,6 +27,7 @@ import argparse
 import json
 import math
 import os
+import random
 import re
 import sys
 import unicodedata
@@ -359,7 +360,7 @@ class Style:
 
     def css(self):
         tones = "".join(
-            ".c-{t}{{fill:var(--{t}1);stroke:var(--{t}2)}}.f-{t}{{fill:var(--{t}2)}}"
+            ".c-{t}{{fill:var(--{t}1);stroke:var(--{t}2)}}.f-{t}{{fill:var(--{t}2)}}.k-{t}{{fill:var(--{t}1)}}"
             ".s-{t}{{stroke:var(--{t}2)}}.x-{t}{{fill:var(--{t}2)}}".format(t=t) for t in TONES)
         if self.scheme == "dark" and self.dark:
             colors = "svg{%s}" % self.palette_vars(self.dark)
@@ -375,6 +376,7 @@ class Style:
             ".h{font-size:20px;font-weight:700}.sub{font-size:13px;fill:var(--mut)}"
             ".t{font-size:%dpx;font-weight:650}.n{font-size:%dpx;fill:var(--mut)}"
             ".card{stroke-width:1.6}.w{fill:var(--on);font-size:12px;font-weight:700}"
+            ".sk{fill:none;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}.sk2{stroke-width:.9;opacity:.6}"
             ".e{fill:none;stroke:var(--edge);stroke-width:1.8;stroke-linecap:round}"
             ".d{stroke-dasharray:6 5}.ah{fill:var(--edge)}.ln{stroke:var(--line);stroke-width:2;fill:none}"
             ".el{font-size:12.5px;fill:var(--mut);paint-order:stroke;stroke:var(--bg);"
@@ -423,10 +425,42 @@ class Canvas:
         anchor = ' text-anchor="middle"' if mid else ' text-anchor="end"' if end else ""
         self.add('<text x="%s" y="%s" class="%s"%s>%s</text>' % (f(x), f(y), cls, anchor, esc(s)))
 
-    def box(self, x, y, w, h, tone, r=None, extra=""):
-        """A tone-colored rounded rectangle (the shape behind every card)."""
-        self.add('<rect x="%s" y="%s" width="%s" height="%s" rx="%s" class="card c-%s"%s%s/>'
-                 % (f(x), f(y), f(w), f(h), f(self.r if r is None else r), tone, self.fx, extra))
+    def box(self, x, y, w, h, tone, r=None, solid=False):
+        """A tone-colored rounded rectangle (the shape behind every card); solid = filled with the tone."""
+        r = min(self.r if r is None else r, w / 2, h / 2)
+        if self.sketch:
+            return self.rough_box(x, y, w, h, tone, r, solid)
+        cls = "f-%s" % tone if solid else "card c-%s" % tone
+        self.add('<rect x="%s" y="%s" width="%s" height="%s" rx="%s" class="%s"%s/>'
+                 % (f(x), f(y), f(w), f(h), f(r), cls, "" if solid else self.fx))
+
+    def rough_box(self, x, y, w, h, tone, r, solid):
+        """Hand-drawn box: a fill that misses the outline a little, and an outline traced twice by a shaky hand.
+        The wobble is seeded by the geometry, so the same diagram always renders the same SVG."""
+        rnd = random.Random("%d,%d,%d,%d" % (x, y, w, h))
+
+        def outline(wob):
+            def j(v):
+                return f(v + rnd.uniform(-wob, wob))
+            bx, by = min(w * .02, 3.0), min(h * .04, 2.0)  # how far the long sides bow
+            return ("M{} {} Q{} {} {} {} Q{} {} {} {} Q{} {} {} {} Q{} {} {} {} "
+                    "Q{} {} {} {} Q{} {} {} {} Q{} {} {} {} Q{} {} {} {}").format(
+                j(x + r), j(y),
+                j(x + w / 2), f(y + rnd.uniform(-by, by)), j(x + w - r), j(y),
+                f(x + w), f(y), j(x + w), j(y + r),
+                f(x + w + rnd.uniform(-bx, bx)), j(y + h / 2), j(x + w), j(y + h - r),
+                f(x + w), f(y + h), j(x + w - r), j(y + h),
+                j(x + w / 2), f(y + h + rnd.uniform(-by, by)), j(x + r), j(y + h),
+                f(x), f(y + h), j(x), j(y + h - r),
+                f(x + rnd.uniform(-bx, bx)), j(y + h / 2), j(x), j(y + r),
+                f(x), f(y), j(x + r + 4), j(y))  # overshoot the start, like a pen that doesn't stop
+        fill = "f-%s" % tone if solid else "k-%s" % tone
+        dx, dy = rnd.uniform(1, 2.5), rnd.uniform(1, 2.5)
+        self.add('<path d="%s" class="%s" transform="translate(%s %s)"%s/>'
+                 % (outline(1.2), fill, f(dx), f(dy), "" if solid else self.fx))
+        if not solid:
+            self.add('<path d="%s" class="sk s-%s"/>' % (outline(1.4), tone))
+            self.add('<path d="%s" class="sk sk2 s-%s"/>' % (outline(2.0), tone))
 
     def wrap(self, text, size, maxw, bold=False):
         return wrap(text, size, maxw, bold, self.sketch, self.mono)
@@ -434,9 +468,27 @@ class Canvas:
     def tw(self, s, size, bold=False):
         return tw(s, size, bold, self.sketch, self.mono)
 
-    def arrow(self, d, dashed=False, tone=None):
+    def arrow(self, d, dashed=False, tone=None, head=True):
         cls = "e" + (" d" if dashed else "") + (" s-" + tone if tone and tone != "neutral" else "")
-        self.add('<path d="%s" class="%s" marker-end="url(#ah)"/>' % (d, cls))
+        self.add('<path d="%s" class="%s"%s/>' % (self.wobble(d) if self.sketch else d, cls,
+                                                  ' marker-end="url(#ah)"' if head else ""))
+
+    STRAIGHT = re.compile(r"^M(-?[\d.]+) (-?[\d.]+) (?:([HV])(-?[\d.]+)|L(-?[\d.]+) (-?[\d.]+))$")
+
+    def wobble(self, d):
+        """A straight line drawn by hand bows a little; curves already look hand-made."""
+        m = self.STRAIGHT.match(d)
+        if not m:
+            return d
+        x1, y1 = float(m.group(1)), float(m.group(2))
+        if m.group(3):
+            x2, y2 = (float(m.group(4)), y1) if m.group(3) == "H" else (x1, float(m.group(4)))
+        else:
+            x2, y2 = float(m.group(5)), float(m.group(6))
+        length = math.hypot(x2 - x1, y2 - y1) or 1
+        bow = random.Random(d).uniform(-1, 1) * min(4.0, length * .04)
+        qx, qy = (x1 + x2) / 2 - (y2 - y1) / length * bow, (y1 + y2) / 2 + (x2 - x1) / length * bow
+        return "M%s %s Q%s %s %s %s" % (f(x1), f(y1), f(qx), f(qy), f(x2), f(y2))
 
     def label(self, x, y, s, maxw=170, up=False):
         """Edge label centered on x; with up=True extra lines grow upward from y."""
@@ -461,9 +513,6 @@ class Canvas:
             head.append('<text x="%d" y="%s" class="sub">%s</text>' % (PAD, f(y), esc(s)))
         w, h = math.ceil(w + PAD), math.ceil(h + PAD)
         defs = ""
-        if sk:
-            defs += ('<filter id="rough"><feTurbulence type="fractalNoise" baseFrequency="0.035" numOctaves="2" '
-                     'seed="7"/><feDisplacementMap in="SourceGraphic" scale="2.6"/></filter>')
         if st.shadow:
             defs += ('<filter id="sh" x="-10%" y="-10%" width="120%" height="140%"><feDropShadow dx="0" dy="1.5" '
                      'stdDeviation="1.6" flood-color="#000" flood-opacity=".10"/></filter>')
@@ -475,10 +524,10 @@ class Canvas:
                          '<path d="M20 0H0V20" fill="none" stroke="var(--line)" stroke-width=".7"/></pattern>')
                 frame += '<rect x="1" y="1" width="%d" height="%d" rx="%s" class="grid"/>' % (
                     w - 2, h - 2, f(st.radius + 4))
-        # shapes first, then all text on top, so the sketch filter never blurs letters
+        # shapes first, then all text on top, so no line ever crosses a letter
         shapes = "".join(p for p in self.parts if not p.startswith("<text"))
         texts = "".join(p for p in self.parts if p.startswith("<text"))
-        body = ('<g filter="url(#rough)">%s</g>' % shapes if sk else shapes) + texts
+        body = shapes + texts
         label = esc(spec.title or spec.kind)
         desc = esc(describe(spec))
         return (
@@ -1060,8 +1109,7 @@ def draw_bars(cv, spec):
             cv.add('<text x="%s" y="%s" class="t" style="font-size:14px" text-anchor="end">%s</text>'
                    % (f(x0 - 14), f(cy + 5 - (len(ls) - 1) * 9 + i * 18), esc(s)))
         bw = max(6.0, BAR * value / vmax)
-        cv.add('<rect x="%s" y="%s" width="%s" height="%s" rx="%s" class="f-%s"/>'
-               % (f(x0), f(cy - BH / 2), f(bw), f(BH), f(min(cv.r * .5, 8)), tone))
+        cv.box(x0, cy - BH / 2, bw, BH, tone, min(cv.r * .5, 8), solid=True)
         lines = cv.wrap(note, NS, 220)
         for i, s in enumerate(lines):
             cv.text(x0 + bw + 10, cy + 4.5 - (len(lines) - 1) * 9 + i * 18, s, "n" + (" x-" + tone if tone != "neutral" else ""))
@@ -1109,9 +1157,7 @@ def draw_hub(cv, spec):
     for c in spokes:
         x1, y1 = center.edge_point(c.cx, c.cy, 3)
         x2, y2 = c.edge_point(center.cx, center.cy, 5 if arrow else 3)
-        cls = "e" + (" s-" + c.tone if c.tone != "neutral" else "")
-        cv.add('<path d="M%s %s L%s %s" class="%s"%s/>'
-               % (f(x1), f(y1), f(x2), f(y2), cls, ' marker-end="url(#ah)"' if arrow else ""))
+        cv.arrow("M%s %s L%s %s" % (f(x1), f(y1), f(x2), f(y2)), tone=c.tone, head=arrow)
     for c in boxes:
         c.draw()
     return max(c.x + c.w for c in boxes), max(c.y + c.h for c in boxes)

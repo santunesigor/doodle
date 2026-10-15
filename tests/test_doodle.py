@@ -108,10 +108,15 @@ class RenderTest(unittest.TestCase):
                 self.assertLess(float(y), h, src)
 
     def test_dark_mode_and_sketch(self):
-        _, svg = doodle.render("stack: S\n@sketch\nA | b | ok")
+        src = "stack: S\n@sketch\nA | b | ok\nB | c"
+        _, svg = doodle.render(src)
+        self.check_svg(svg)
         self.assertIn("prefers-color-scheme:dark", svg)
-        self.assertIn('filter="url(#rough)"', svg)
-        self.assertNotIn("<text", svg.split('<g filter="url(#rough)">')[1].split("</g>")[0])
+        self.assertEqual(svg.count('class="sk s-ok"'), 1)  # each box is traced twice
+        self.assertEqual(svg.count('class="sk sk2 s-ok"'), 1)
+        self.assertNotIn("<rect x=\"28\"", svg)
+        self.assertEqual(svg, doodle.render(src)[1])  # the wobble is deterministic
+        self.assertLess(svg.rindex("<path"), svg.index('class="t"'))  # text is drawn on top of every shape
 
     def test_escaping(self):
         _, svg = doodle.render('flow: <a & "b">\nx < y | a & b')
