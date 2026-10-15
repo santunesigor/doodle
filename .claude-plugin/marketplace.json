@@ -1,0 +1,21 @@
+{
+  "name": "doodle",
+  "owner": {
+    "name": "Igor Antunes"
+  },
+  "metadata": {
+    "description": "Doodle: explain anything with friendly diagrams in Markdown, using very few tokens",
+    "version": "0.1.0"
+  },
+  "plugins": [
+    {
+      "name": "doodle",
+      "description": "Explains bugs, code flows and concepts to beginners as a Markdown document with clean SVG diagrams generated from tiny text specs",
+      "source": "./",
+      "strict": false,
+      "skills": [
+        "./skills/doodle"
+      ]
+    }
+  ]
+}
