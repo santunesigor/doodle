@@ -375,6 +375,27 @@ class LintTest(unittest.TestCase):
                 doodle.render_markdown(md)
 
 
+class DocsInSyncTest(unittest.TestCase):
+    def read(self, *parts):
+        with open(os.path.join(ROOT, *parts), encoding="utf-8") as fh:
+            return fh.read()
+
+    def test_skill_and_references_cover_everything(self):
+        skill = self.read("skills", "doodle", "SKILL.md")
+        custom = self.read("skills", "doodle", "references", "customize.md")
+        dsl = self.read("skills", "doodle", "references", "dsl.md")
+        for kind in doodle.KINDS:
+            self.assertIn("| `%s` |" % kind, skill)
+            self.assertIn("## %s" % kind, dsl)
+        for theme in doodle.THEMES:
+            self.assertIn("`%s`" % theme, skill)
+            self.assertIn("| `%s` |" % theme, custom)
+        for key in doodle.DEFAULTS:
+            self.assertIn("| `%s` |" % key, custom)
+        for choice in doodle.CHOICES["audience"] + doodle.CHOICES["depth"]:
+            self.assertIn("`%s`" % choice, skill)
+
+
 class StyleTest(unittest.TestCase):
     def test_every_theme_renders_valid_svg(self):
         for name in doodle.THEMES:

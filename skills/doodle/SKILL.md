@@ -1,6 +1,6 @@
 ---
 name: doodle
-description: Explains bugs, code flows, protocols, and concepts to beginners in Markdown with SVG diagrams generated from small text specs. Use when the user asks for an explanation with diagrams or drawings, says "explain like I'm 5" or "me explica com desenhos", or wants an illustrated explanation after not understanding text alone.
+description: Explains bugs, code flows, protocols, and concepts in a Markdown document with SVG diagrams generated from small text specs, adapted to the reader's level. Use when the user asks for an explanation with diagrams or drawings, says "explain like I'm 5" or "me explica com desenhos", wants an illustrated explanation after not understanding text alone, or wants to change how Doodle explanations look or read (theme, colors, audience, depth).
 ---
 
 # Doodle: Diagrams Over Overly Dense Long Explanations
@@ -9,35 +9,57 @@ You write **one Markdown file** where each drawing is a tiny ` ```doodle ` text 
 block into an SVG under `img/` and swaps the block for an image link. Use the renderer instead of writing SVG by hand.
 Keep generated SVG markup out of context unless debugging the renderer; inspect a visual preview when needed.
 
+`<doodle>` below means `python3 <this-skill-dir>/scripts/doodle.py`.
+
 ## Workflow
 
-1. **Understand first.** If the topic is about this project, read the real code, logs and data. Explanations must be
+1. **Read the preferences.** Run `<doodle> --settings` from the folder where the document will go. It prints the
+   merged `doodle.json` settings as JSON. Use `audience`, `depth`, `language`, `docsDir` and `notes` (house rules
+   written by the user; follow them). The current request wins over the file: "like I'm 5" means `kid`,
+   "quick"/"rápido" means `quick`, "in depth"/"a fundo" means `deep`.
+2. **Understand first.** If the topic is about this project, read the real code, logs and data. Explanations must be
    true; never invent evidence.
-2. **Write `<topic-slug>.md`** in the current directory (or where the user asks), in **the user's language**, using
-   the structure below.
-3. **Render:** `python3 <this-skill-dir>/scripts/doodle.py <topic-slug>.md`.
-   It prints the SVG paths. On `error: ... line N`, fix that block and run again. Re-running is safe: rendered
-   blocks are kept as `<!-- doodle ... -->` comments and re-rendered in place.
-   If using `-o <image-dir>`, pass the same directory on subsequent runs; SVG paths must stay inside that directory.
-4. **Reply briefly:** the file path plus 2–3 lines of summary. Don't paste the document into the chat.
+3. **Write `<topic-slug>.md`** in `docsDir` (or the current directory, or where the user asks), in the user's
+   language unless `language` says otherwise, using the structure below.
+4. **Render:** `<doodle> <topic-slug>.md`. It prints the SVG paths, then `warning: file:line: ...` lines. Fix warnings
+   that reveal a mistake (a misspelled tone, an edge to a node that doesn't exist); the rest are judgment calls.
+   On `error: file:line: ...`, fix that line and run again. Re-running is safe: rendered blocks are kept as
+   `<!-- doodle ... -->` comments and re-rendered in place. Theme, colors and image folder come from `doodle.json`;
+   don't pass `--theme` or `-o` unless the user asked for this one document.
+5. **Reply briefly:** the file path plus 2–3 lines of summary. Don't paste the document into the chat.
 
-No Python? Use ` ```mermaid ` blocks instead (GitHub renders them) and skip step 3.
+No Python? Use ` ```mermaid ` blocks instead (GitHub renders them) and skip step 4.
+
+## Adapt to the reader
+
+| `audience` | Write like this |
+|---|---|
+| `kid` | No jargon at all. Everyday metaphors in every step and title. Sentences under 12 words. |
+| `beginner` (default) | Define each technical term the first time. A metaphor where it helps. |
+| `developer` | Assume programming basics. Real names, file paths and short code snippets; metaphors only for the hard part. |
+| `expert` | Dense and precise. Skip the basics, focus on the mechanism, edge cases and trade-offs. |
+
+| `depth` | Shape |
+|---|---|
+| `quick` | Title question, "In three sentences", 1–2 drawings, one-line takeaway. Nothing else. |
+| `standard` (default) | The full structure below with 2–4 steps. |
+| `deep` | 3–6 steps, plus "Common mistakes" and "Check yourself" (2–3 questions, answers in `<details>`). |
 
 ## Document structure (the teaching method)
 
 ```
 # <Question the reader actually has, e.g. "Why does the app log me out every morning?">
 ## In three sentences        -> 3 numbered sentences: what happens, why, what fixes it
-## Pieces you need to know   -> table | Piece | What it is | (only if there are 3+ unfamiliar terms)
+## Pieces you need to know   -> table | Piece | What it is | or a `hub` drawing (only if 3+ unfamiliar terms)
 ## Step 1: <one claim>       -> one doodle + 2–5 bullets; end with the "why"
 ## Step 2: ...               -> 2–5 steps total
 ## When it happens / Why it matters
-## Evidence                  -> only real logs, numbers, file paths (omit if none)
+## Evidence                  -> only real logs, numbers, file paths; a `bars` drawing for numbers (omit if none)
 ```
 
-Writing rules: short sentences; plain words; define each jargon term the first time; **bold** the key fact in each
-step; one idea per drawing; prefer everyday metaphors (a phone book, a mailbox, a queue at a bakery) in
-titles and notes.
+Writing rules: short sentences; plain words; **bold** the key fact in each step; one idea per drawing; the drawing's
+title states the step's claim; tones tell the story (`bad` = the broken part, `ok` = the fix or healthy path,
+`warn` = the risky step, `info` = the actor or input).
 
 ## Doodle blocks (cheat sheet)
 
@@ -51,7 +73,7 @@ Delivered | still hot | ok
 
 - Line 1 is `kind: Title`. Each row is `label | note | tone`; note and tone are optional.
 - Tones: `neutral` (default), `info`, `ok`, `bad`, `warn`. Options: `@sketch` (hand-drawn), `@vertical`,
-  `@horizontal`, `@arrow` (for `compare` and `stack`). `\n` breaks a line; `//` starts a comment.
+  `@horizontal`, `@arrow` (for `compare`, `stack`, `hub`), `@theme NAME`. `\n` breaks a line; `//` starts a comment.
 - Keep labels ≤ 4 words and notes ≤ 12 words. Use 3–6 rows; split bigger ideas into two drawings.
 
 | kind | use it for | extra syntax |
@@ -63,5 +85,20 @@ Delivered | still hot | ok
 | `tree` | folders, hierarchies, parts of a whole | indent children by 2 spaces |
 | `stack` | layers (architecture, network, call stack) | rows top to bottom; `@arrow` links them |
 | `sequence` | who talks to whom (requests, protocols) | `A -> B: message \| tone`; `~>` = reply (dashed); `A -> A` = self |
+| `bars` | how much: time, size, count, cost | `Label \| 120 ms \| tone`; the note holds the number |
+| `hub` | what something is made of; key vocabulary | first row is the center, the others go around it |
 
 Full syntax and examples: [references/dsl.md](references/dsl.md). Read it only if the cheat sheet isn't enough.
+
+## Personalize
+
+When the user states a **lasting** preference ("always use the chalk theme", "my team are senior devs", "save these
+in docs/explain", "use our brand purple"), save it instead of just applying it once:
+
+- For this project: edit `doodle.json` at the repository root (create it with `<doodle> --init` if missing).
+- For every project: edit `~/.config/doodle/config.json`.
+- For one document only: add `@theme NAME` to its blocks, so re-renders keep the look.
+
+Then re-render any document they are looking at. Settings: `theme` (`paper`, `clean`, `candy`, `blueprint`,
+`chalk`), `sketch`, `scheme` (`auto`/`light`/`dark`), `colors` (per tone, `#hex`), `imageDir`, `audience`, `depth`,
+`language`, `docsDir`, `notes`. Details and examples: [references/customize.md](references/customize.md).

@@ -1,4 +1,4 @@
 interface:
   display_name: "Doodle"
   short_description: "Explain bugs and concepts with friendly diagrams"
-  default_prompt: "Use $doodle to explain this topic in a beginner-friendly Markdown document with diagrams."
+  default_prompt: "Use $doodle to explain this topic in an illustrated Markdown document, adapted to my level."
