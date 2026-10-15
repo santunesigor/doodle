@@ -1,7 +1,7 @@
 <h1 align="center">🖍️ Doodle</h1>
 
 <p align="center"><strong>Transforme “não entendi” em um desenho.</strong></p>
-<p align="center">Explicações ilustradas para agentes de IA. Specs curtos. Diagramas SVG fáceis de entender.</p>
+<p align="center">Explicações ilustradas para agentes de IA. Poucas linhas de texto. Diagramas SVG fáceis de entender.</p>
 
 <p align="center">
   <a href="https://github.com/santunesigor/doodle/actions/workflows/test.yml"><img src="https://github.com/santunesigor/doodle/actions/workflows/test.yml/badge.svg" alt="Testes"></a>
@@ -25,7 +25,9 @@ Explica bugs, fluxos de código, protocolos e conceitos em um documento Markdown
 O renderizador precisa de **Python 3.8+** e usa apenas a biblioteca padrão. Não exige chaves de API nem pacotes Python.
 Sem Python, a skill usa Mermaid.
 
-Instale com a [CLI skills](https://github.com/vercel-labs/skills) e escolha seu agente:
+O instalador [CLI skills](https://github.com/vercel-labs/skills) também precisa de Node.js 22.20+ com `npx` e Git.
+Se não usa Node.js, escolha a opção nativa do Codex/Claude Code abaixo ou a instalação manual do tutorial.
+Para usar a CLI, rode na pasta do seu projeto e escolha seu agente:
 
 ```bash
 npx skills add santunesigor/doodle --skill doodle
@@ -107,7 +109,7 @@ Pronto | história em linha reta | ok
 ```
 
 O renderizador cuida da disposição, das quebras de texto, das cores, dos temas claro e escuro e do estilo opcional `@sketch`.
-Specs curtos deixam o código SVG fora do contexto do agente; a economia real de tokens depende do desenho e do tokenizador.
+Especificações curtas deixam o código SVG fora do contexto do agente; a economia real de tokens depende do desenho e do tokenizador.
 
 Cada explicação começa com três frases, apresenta os termos novos e desenvolve a ideia com um desenho por passo.
 Quando o assunto é seu projeto, usa código, logs e caminhos de arquivos reais como evidência.
@@ -137,14 +139,21 @@ Veja as opções e um exemplo de cada tipo na [referência de sintaxe](skills/do
 
 ## Rodar sem agente
 
+Em um terminal compatível com Bash, clone o repositório e renderize um exemplo pequeno:
+
 ```bash
-python3 skills/doodle/scripts/doodle.py notas.md
-python3 skills/doodle/scripts/doodle.py spec.txt -o desenho.svg
+git clone https://github.com/santunesigor/doodle.git
+cd doodle
+printf '%s\n' 'stack: Olá' 'Navegador | info' 'Servidor | ok' > demo.txt
+python3 skills/doodle/scripts/doodle.py demo.txt
 ```
 
-No modo Markdown, o comando renderiza os blocos `doodle` no próprio arquivo. Os specs ficam em comentários HTML para você
-editar e renderizar novamente. Use `-o assets/diagrams` para escolher outra pasta de imagens; repita a opção nas próximas
-renderizações daquele documento. Todos os blocos e caminhos de saída são validados antes de gravar os arquivos.
+Abra o `demo.svg` gerado no navegador. Veja os sete tipos no [tutorial](docs/tutorial.pt-BR.md#5-escrever-os-seus-próprios-desenhos).
+
+Para um arquivo Markdown com blocos `doodle`, rode `python3 skills/doodle/scripts/doodle.py notas.md` na raiz do repositório.
+Isso **altera o próprio `notas.md`**. As especificações ficam em comentários HTML para editar e renderizar novamente.
+Use `-o assets/diagrams` para escolher outra pasta de imagens; repita a opção nas próximas renderizações daquele documento.
+No modo Markdown, as especificações e os caminhos dos SVGs são verificados antes de gravar os arquivos.
 
 ## Organização do repositório
 

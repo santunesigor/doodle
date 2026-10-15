@@ -8,6 +8,8 @@ desenho e aprender a escrever desenhos por conta própria.
 ## 1. Instalar
 
 Você precisa de **Python 3.8 ou mais novo**. Confira com `python3 --version`.
+O instalador com `npx` também precisa de Node.js 22.20+ e Git; as opções de plugin nativo e instalação manual abaixo dispensam Node.js.
+Os exemplos de terminal usam sintaxe Bash (Linux, macOS, WSL ou Git Bash).
 
 Escolha um dos jeitos abaixo.
 
@@ -90,8 +92,8 @@ Veja resultados prontos em [examples/git-rebase](../examples/git-rebase/git-reba
 
 O Doodle escreve sempre na mesma ordem, pensada para a ficha cair:
 
-1. **Em três frases:** o que acontece, por que acontece e o que resolve.
-2. **Peças que você precisa conhecer:** uma tabela curta com os termos novos.
+1. **Em três frases:** a ideia principal, como funciona e por que importa (ou o que resolve o problema).
+2. **Peças que você precisa conhecer:** uma tabela curta quando houver pelo menos três termos novos.
 3. **Passos:** cada passo faz uma afirmação, com um desenho e alguns tópicos que terminam no "por quê".
 4. **Quando acontece / Por que importa.**
 5. **Provas:** logs, números e caminhos de arquivo reais. Essa seção só aparece quando existe prova de verdade.
@@ -118,7 +120,8 @@ Você tem dois jeitos de mudar:
 python3 ~/.agents/skills/doodle/scripts/doodle.py como-o-dns-funciona.md
 ```
 
-Esse caminho é o da instalação manual no Codex; para o Claude Code, use `~/.claude/skills`.
+Esse caminho é o da instalação manual no Codex; para uma cópia manual no Claude Code, use `~/.claude/skills`.
+Se instalou pelo marketplace de plugins, peça ao agente para renderizar o documento de novo; a pasta do plugin pode ser outra.
 O comando redesenha as imagens e preserva o texto ao redor. Specs ou caminhos de saída inválidos deixam o documento e as
 imagens existentes intactos. Se escolheu outra pasta de imagens com `-o`, repita a opção em cada renderização.
 
@@ -224,24 +227,29 @@ Coloque cada opção numa linha própria, logo depois do título:
 
 ### Renderizar um desenho sozinho
 
-Salve o bloco (sem as cercas ```) num arquivo `.txt`:
+Em uma cópia local deste repositório, salve o exemplo da pizza acima (sem as cercas) como `pizza.txt` na raiz.
+Se ainda não tem uma cópia, rode `git clone https://github.com/santunesigor/doodle.git` e depois `cd doodle`.
+Na raiz do repositório:
 
 ```bash
-python3 doodle.py pizza.txt               # cria pizza.svg
-python3 doodle.py pizza.txt -o saida.svg  # escolhe o nome
-echo "stack: Oi
-A
-B" | python3 doodle.py - > oi.svg         # lê da entrada padrão
+python3 skills/doodle/scripts/doodle.py pizza.txt
+python3 skills/doodle/scripts/doodle.py pizza.txt -o saida.svg
+printf '%s\n' 'stack: Oi' 'A' 'B' | python3 skills/doodle/scripts/doodle.py - > oi.svg
 ```
+
+Isso cria `pizza.svg`, `saida.svg` e `oi.svg`. Abra um SVG no navegador para ver o desenho.
+Para renderizar Markdown, use o mesmo comando com o caminho do `.md`; o comando altera o próprio arquivo.
 
 ## 6. Problemas comuns
 
 | Problema | Solução |
 |---|---|
 | `error: line 3: unknown kind 'pizza'` | A primeira linha precisa começar com um dos 7 tipos, em inglês. |
-| `error: 'cycle' needs at least 2 rows` | Acrescente linhas ou escolha outro tipo. |
-| Um texto virou o tom | A última célula que é exatamente uma palavra de tom (`ok`, `bad`…) vira o tom. Reescreva, por exemplo `status \| tudo certo`. |
+| `error: cycle needs at least 2 rows` | Acrescente linhas ou escolha outro tipo. |
+| Uma nota virou um tom | A última célula que é exatamente uma palavra de tom (`ok`, `bad`…) vira o tom. Reescreva, por exemplo `status \| tudo certo`. |
 | Uma caixa ficou alta demais | Use rótulos de até 4 palavras e notas de até 12, ou divida a ideia em dois desenhos. |
 | As imagens não aparecem no GitHub | Faça commit da pasta `img/` junto com o `.md`. |
 | Não tem Python na máquina | O agente escreve blocos ` ```mermaid ` no lugar. O GitHub também mostra esses blocos, com visual mais simples. |
+| `npx: command not found` | Instale Node.js ou escolha a instalação por plugin nativo/manual. |
+| `SVG output must stay inside 'img'` | Se usou `-o assets/diagrams` antes, repita a opção. Mantenha os links das imagens dentro da pasta escolhida. |
 | A skill não é usada | Abra uma sessão nova depois de instalar, ou peça direto: "usa a skill doodle". |

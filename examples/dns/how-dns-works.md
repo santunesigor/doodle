@@ -4,7 +4,10 @@
 
 1. Computers find each other by **numbers** (IP addresses), but people type **names** like `www.example.com`.
 2. DNS is the internet's phone book: a **chain of servers** that turns the name into a number, one piece at a time.
-3. Every answer is **cached** for a while, so most lookups never leave your computer.
+3. Answers can be **cached** until their TTL expires, so a repeat lookup may avoid some or all of those questions.
+
+The names and addresses below illustrate an IPv4 address lookup; they are not a live DNS result.
+The full lookup assumes the relevant caches are empty and omits the browser's interaction with the operating system.
 
 ---
 
@@ -35,7 +38,7 @@ tree: DNS is a tree, read from right to left
 -->
 ![DNS is a tree, read from right to left](img/how-dns-works-dns-is-a-tree-read-from-right-to-left.svg)
 
-- Nobody keeps the whole tree. Each level only knows **who is in charge of the next level**.
+- No single server needs the whole tree. Each zone holds its own records and can **delegate part of the tree** to other servers.
 - That is why the lookup is a series of questions, not a single one.
 
 ---
@@ -57,7 +60,7 @@ Resolver ~> Browser: 203.0.113.10 | ok
 ![One full lookup](img/how-dns-works-one-full-lookup.svg)
 
 - Your browser asks **one** question. The resolver does all the walking.
-- Each answer except the last is a **referral**: "I don't know, but ask them".
+- The root and `.com` servers return **referrals**: "ask these servers next". The authoritative server returns the address.
 
 ---
 
@@ -74,7 +77,7 @@ Resolver | has a big shared cache, walks the tree only if needed | info
 ![Who answers, from closest to farthest](img/how-dns-works-who-answers-from-closest-to-farthest.svg)
 
 - The lookup goes down the stack only until **someone already knows** the answer.
-- That is why the second visit to a site feels faster.
+- Reusing a cached answer saves DNS lookup time on a later visit.
 
 ---
 
@@ -98,3 +101,7 @@ TTL expires | the answer is thrown away | warn
 
 - **"The site works for me but not for you"** is often a DNS cache with an old answer.
 - **"Server not found"** means the name could not be turned into a number. The site itself may be fine.
+
+## References
+
+- [RFC 1034: domain hierarchy, referrals, resolvers, and caching](https://www.rfc-editor.org/rfc/rfc1034.html).

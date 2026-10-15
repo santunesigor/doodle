@@ -25,7 +25,9 @@ It explains bugs, code flows, protocols, and concepts in a Markdown document wri
 The renderer needs **Python 3.8+** and uses only the standard library. No API keys or Python packages are needed.
 If Python is unavailable, the skill falls back to Mermaid.
 
-Install with the [skills CLI](https://github.com/vercel-labs/skills) and choose your agent:
+The [skills CLI](https://github.com/vercel-labs/skills) installer also needs Node.js 22.20+ with `npx` and Git.
+If you don't use Node.js, choose the native Codex/Claude Code option below or the manual installation in the tutorial.
+To use the CLI, run this in your project folder and choose your agent:
 
 ```bash
 npx skills add santunesigor/doodle --skill doodle
@@ -137,14 +139,21 @@ See the [syntax reference](skills/doodle/references/dsl.md) for options and exam
 
 ## Run without an agent
 
+From a Bash-compatible terminal, clone the repository and render a small example:
+
 ```bash
-python3 skills/doodle/scripts/doodle.py notes.md
-python3 skills/doodle/scripts/doodle.py spec.txt -o diagram.svg
+git clone https://github.com/santunesigor/doodle.git
+cd doodle
+printf '%s\n' 'stack: Hello' 'Browser | info' 'Server | ok' > demo.txt
+python3 skills/doodle/scripts/doodle.py demo.txt
 ```
 
-Markdown mode renders `doodle` blocks in place. The original specs remain in HTML comments, so you can edit and render again.
+Open the generated `demo.svg` in your browser. See the [tutorial](docs/tutorial.md#5-write-your-own-diagrams) for all seven types.
+
+For a Markdown file containing `doodle` blocks, run `python3 skills/doodle/scripts/doodle.py notes.md` from the repository root.
+This **updates `notes.md` in place**. The original specs remain in HTML comments, so you can edit and render again.
 Use `-o assets/diagrams` to choose a different image directory; pass the same option when rendering that document again.
-All blocks and output paths are validated before files are written.
+In Markdown mode, diagram specs and SVG output paths are checked before writing files.
 
 ## Repository layout
 

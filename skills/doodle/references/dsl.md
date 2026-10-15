@@ -27,7 +27,8 @@ A **row** is `label | note | tone`.
 | `@vertical` / `@horizontal` | force the direction of `timeline` and `flow` (the default is automatic) |
 | `@arrow` | arrows between `compare` columns and between `stack` layers |
 
-All diagrams switch to dark colors automatically when the viewer uses dark mode.
+SVGs include a dark palette through `prefers-color-scheme`. It activates in viewers that support this media query;
+other viewers may show the light palette.
 
 ---
 
@@ -47,7 +48,8 @@ Response | 200 OK + HTML | ok
 
 There are two ways to write a flow.
 
-**A chain**, where you write only rows and they connect top to bottom:
+**A chain**, where you write only rows and they connect in that order. Short flows are horizontal by default;
+add `@vertical` to draw them from top to bottom:
 
 ```doodle
 flow: Build pipeline
@@ -71,14 +73,16 @@ d -> b: after login | info
 ```
 
 - An edge looks like `from -> to: label | tone`. Use `~>` for a dashed edge.
-- An endpoint can be an `[id]`, a 1-based row number, or the exact label (case-insensitive).
+- An endpoint can be a bare ID (`a` for a node declared as `[a] Label`), a 1-based row number, or the exact label
+  (case-insensitive). Use brackets only in node declarations, not in edges.
   An endpoint that matches nothing creates a new node, so `A -> B` works with no rows at all.
 - An edge that goes back (a loop) is drawn as a curve around the diagram.
 - With more than 4 levels the flow turns vertical.
 
 ## cycle
 
-The rows are placed clockwise around a circle, starting at the top, and the last row connects back to the first.
+Use at least two rows. With three or more, rows go clockwise around a circle, starting at the top, and the last row
+connects back to the first. A two-row cycle is drawn side by side with a return arrow.
 
 ```doodle
 cycle: The code review loop
@@ -91,18 +95,18 @@ Fix and push | ok
 ## compare
 
 `## Header | note | tone` starts a column. The rows below it are its items, each with a ✓ ✗ ! i • icon from its tone.
-An item without a tone takes the column's tone.
+An item with no tone, or with `neutral`, takes the column's tone.
 The layout works best with 2–3 columns.
 
 ```doodle
 compare: Merge vs rebase
 @arrow
 ## Merge | keeps history as it happened | info
-Extra merge commit | warn
+May add merge commit | warn
 Safe on shared branches | ok
 ## Rebase | rewrites history in a line | info
 Linear history | ok
-Never on shared branches | bad
+Avoid rewriting shared commits | bad
 ```
 
 ## tree

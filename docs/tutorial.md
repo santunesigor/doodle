@@ -8,6 +8,8 @@ drawing, and learn to write diagrams yourself.
 ## 1. Install
 
 You need **Python 3.8 or newer**. Check with `python3 --version`.
+The `npx` installer also needs Node.js 22.20+ and Git; the native plugin and manual options below don't need Node.js.
+Terminal examples use Bash syntax (Linux, macOS, WSL, or Git Bash).
 
 Pick one of the following.
 
@@ -90,8 +92,8 @@ See finished results in [examples/dns](../examples/dns/how-dns-works.md) and
 
 Doodle writes in a fixed order, built to make things click:
 
-1. **In three sentences:** what happens, why, and what fixes it.
-2. **Pieces you need to know:** a short table of the unfamiliar terms.
+1. **In three sentences:** the main idea, how it works, and why it matters (or what fixes the problem).
+2. **Pieces you need to know:** a short table when there are at least three unfamiliar terms.
 3. **Steps:** each one makes one claim, with one drawing and a few bullets that end with the "why".
 4. **When it happens / Why it matters.**
 5. **Evidence:** real logs, numbers and file paths. This section only appears when there is real proof.
@@ -118,7 +120,8 @@ You have two ways to change it:
 python3 ~/.agents/skills/doodle/scripts/doodle.py how-dns-works.md
 ```
 
-This path is for a manual Codex installation; for Claude Code, use `~/.claude/skills` instead.
+This path is for a manual Codex installation; for a manual Claude Code copy, use `~/.claude/skills` instead.
+If you installed through the plugin marketplace, ask the agent to rerender the document; its plugin folder may differ.
 The command redraws the pictures and preserves the surrounding text. Invalid diagram specs or output paths leave the
 document and existing images unchanged. If you chose a custom image directory with `-o`, pass it again on every run.
 
@@ -222,24 +225,29 @@ Add them on their own line, right after the title:
 
 ### Rendering a single diagram
 
-Save the block (without the fences) in a `.txt` file:
+In a local clone of this repository, save the pizza example above (without the fences) as `pizza.txt` in the repository root.
+If you don't have a clone yet, run `git clone https://github.com/santunesigor/doodle.git`, then `cd doodle`.
+From that root folder:
 
 ```bash
-python3 doodle.py pizza.txt               # creates pizza.svg
-python3 doodle.py pizza.txt -o out.svg    # chooses the name
-echo "stack: Hi
-A
-B" | python3 doodle.py - > hi.svg         # reads from stdin
+python3 skills/doodle/scripts/doodle.py pizza.txt
+python3 skills/doodle/scripts/doodle.py pizza.txt -o out.svg
+printf '%s\n' 'stack: Hi' 'A' 'B' | python3 skills/doodle/scripts/doodle.py - > hi.svg
 ```
+
+These create `pizza.svg`, `out.svg`, and `hi.svg`. Open an SVG in your browser to view it.
+To render a Markdown file, use the same command with its `.md` path; the command updates that file in place.
 
 ## 6. Troubleshooting
 
 | Problem | Fix |
 |---|---|
 | `error: line 3: unknown kind 'pie'` | The first line must start with one of the 7 kinds. |
-| `error: 'cycle' needs at least 2 rows` | Add rows, or pick another kind. |
-| A label ended up as the tone | A last cell that is exactly a tone word (`ok`, `bad`…) becomes the tone. Rephrase it, e.g. `status \| all good`. |
+| `error: cycle needs at least 2 rows` | Add rows, or pick another kind. |
+| A note became a tone | A last cell that is exactly a tone word (`ok`, `bad`…) becomes the tone. Rephrase it, e.g. `status \| all good`. |
 | A box is too tall | Keep labels to 4 words or fewer and notes to 12 words or fewer, or split the idea into two drawings. |
 | Pictures don't show up on GitHub | Commit the `img/` folder together with the `.md` file. |
 | No Python on the machine | The agent writes ` ```mermaid ` blocks instead. GitHub renders them too, with a plainer look. |
+| `npx: command not found` | Install Node.js, or choose the native plugin/manual installation option. |
+| `SVG output must stay inside 'img'` | If you previously used `-o assets/diagrams`, pass that same option again. Keep image links inside the selected directory. |
 | The skill isn't used | Start a new session after installing, or ask explicitly: "use the doodle skill". |
