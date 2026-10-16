@@ -11,11 +11,7 @@
     {
       "name": "doodle",
       "description": "Explains bugs, code flows and concepts as a Markdown document with SVG diagrams generated from tiny text specs, adapted to the reader, with themes and saved preferences",
-      "source": "./",
-      "strict": false,
-      "skills": [
-        "./skills/doodle"
-      ]
+      "source": "./"
     }
   ]
 }
