@@ -1,0 +1,13 @@
+{
+  "name": "doodle",
+  "version": "0.2.0",
+  "description": "Explains bugs, code flows and concepts as a Markdown document with SVG diagrams generated from tiny text specs, adapted to the reader, with themes and saved preferences",
+  "author": {
+    "name": "Igor Antunes",
+    "url": "https://github.com/santunesigor"
+  },
+  "homepage": "https://github.com/santunesigor/doodle",
+  "repository": "https://github.com/santunesigor/doodle",
+  "license": "MIT",
+  "keywords": ["diagrams", "svg", "markdown", "explain", "documentation", "education"]
+}
