@@ -12,13 +12,14 @@
 </p>
 
 <p align="center">
-  <a href="#instalação">Instalar</a> · <a href="#uso">Usar</a> · <a href="#exemplos">Exemplos</a> ·
+  <a href="#instalação">Instalar</a> · <a href="#uso">Usar</a> · <a href="#do-seu-jeito">Personalizar</a> ·
+  <a href="#exemplos">Exemplos</a> ·
   <a href="docs/tutorial.pt-BR.md">Tutorial</a> · <a href="CONTRIBUTING.md">Contribuir</a> ·
   <a href="README.md">English</a>
 </p>
 
 Doodle é uma [Agent Skill](https://agentskills.io/) para **Claude Code, Codex, Cursor e outros agentes compatíveis**.
-Explica bugs, fluxos de código, protocolos e conceitos em um documento Markdown para iniciantes, no seu idioma.
+Explica bugs, fluxos de código, protocolos e conceitos em um documento Markdown no seu nível, no seu idioma.
 
 <p align="center">
   <img src="examples/git-rebase/img/git-rebase-pt-br-merge-ou-rebase.svg" alt="Comparação entre merge e rebase gerada pelo Doodle">
@@ -93,6 +94,10 @@ Não entendi esse bug. Mostra o fluxo com diagramas, usando o código deste repo
 Explain git rebase with drawings, in English.
 ```
 
+```text
+Explica o fluxo de checkout para os devs seniores novos, a fundo, com o tema blueprint.
+```
+
 No Codex, você também pode chamar diretamente: `$doodle me explica como o DNS funciona com desenhos`.
 
 O agente lê as evidências relevantes, escreve `<tema>.md`, renderiza os desenhos em `img/` e responde com o caminho do documento.
@@ -111,13 +116,15 @@ Refaz A e B | viram A' e B', com hashes novos | warn
 Pronto | história em linha reta | ok
 ```
 
-O renderizador cuida da disposição, das quebras de texto, das cores, dos temas claro e escuro e do estilo opcional `@sketch`.
+O renderizador cuida da disposição, das quebras de texto, das cores, dos modos claro e escuro, de cinco temas e do estilo
+opcional `@sketch`. Ele também revisa as especificações: um tom digitado errado ou uma seta para uma caixa que não existe
+vira um aviso com o número da linha, para o agente corrigir antes de você ver.
 Especificações curtas deixam o código SVG fora do contexto do agente; a economia real de tokens depende do desenho e do tokenizador.
 
 Cada explicação começa com três frases, apresenta os termos novos e desenvolve a ideia com um desenho por passo.
 Quando o assunto é seu projeto, usa código, logs e caminhos de arquivos reais como evidência.
 
-### Sete tipos de desenho
+### Nove tipos de desenho
 
 | Tipo | Melhor para |
 | --- | --- |
@@ -128,8 +135,46 @@ Quando o assunto é seu projeto, usa código, logs e caminhos de arquivos reais 
 | `tree` | Pastas e hierarquias |
 | `stack` | Camadas e arquitetura |
 | `sequence` | Requisições, respostas e protocolos |
+| `bars` | Números: tempo, tamanho, quantidade, custo |
+| `hub` | Do que algo é feito; o vocabulário essencial |
 
 Veja as opções e um exemplo de cada tipo na [referência de sintaxe](skills/doodle/references/dsl.md).
+
+## Do seu jeito
+
+O Doodle adapta **como escreve** e **como desenha**. Diga uma vez ao agente, por exemplo "sempre explique para devs
+seniores e use o tema clean com o nosso roxo", e ele guarda isso num `doodle.json`:
+
+```json
+{
+  "theme": "clean",
+  "colors": {"info": "#6d28d9"},
+  "audience": "developer",
+  "depth": "deep",
+  "language": "pt-BR",
+  "docsDir": "docs/explicacoes"
+}
+```
+
+| Configuração | Opções |
+| --- | --- |
+| `audience` | `kid` (criança), `beginner` (iniciante, padrão), `developer`, `expert` |
+| `depth` | `quick` (dois desenhos), `standard`, `deep` (inclui erros comuns e um quiz) |
+| `theme` | `paper` (padrão), `clean`, `candy`, `blueprint`, `chalk` |
+| `colors` | uma cor `#hex` por tom; as versões do modo escuro são geradas para você |
+| `scheme` | `auto` (segue o modo claro/escuro), `light`, `dark` |
+
+Coloque na raiz do projeto (`doodle.json`; arquivos em subpastas mudam só o que citam) ou em
+`~/.config/doodle/config.json` para todos os projetos. Um desenho isolado pode trocar de tema com `@theme chalk`.
+Veja todas as configurações em [customize.md](skills/doodle/references/customize.md).
+
+<p align="center">
+  <img src="examples/themes/img/themes-can-i-deploy-paper.svg" width="49%" alt="Tema paper">
+  <img src="examples/themes/img/themes-can-i-deploy-clean.svg" width="49%" alt="Tema clean">
+  <img src="examples/themes/img/themes-can-i-deploy-candy.svg" width="32%" alt="Tema candy">
+  <img src="examples/themes/img/themes-can-i-deploy-blueprint.svg" width="32%" alt="Tema blueprint">
+  <img src="examples/themes/img/themes-can-i-deploy-chalk.svg" width="32%" alt="Tema chalk">
+</p>
 
 ## Exemplos
 
@@ -137,6 +182,7 @@ Veja as opções e um exemplo de cada tipo na [referência de sintaxe](skills/do
 | --- | --- | --- |
 | [Por que o git rebase “reescreve a história”?](examples/git-rebase/git-rebase-pt-br.md) | Português | Timeline, compare, flow |
 | [How does my browser find a website?](examples/dns/how-dns-works.md) | English | Tree, sequence, stack, cycle |
+| [Doodle themes](examples/themes/themes.md) | English | O mesmo fluxo nos cinco temas |
 
 <p align="center">
   <img src="examples/git-rebase/img/git-rebase-pt-br-o-que-o-git-rebase-main-faz.svg" alt="O que o git rebase main faz, passo a passo">
@@ -153,12 +199,14 @@ printf '%s\n' 'stack: Olá' 'Navegador | info' 'Servidor | ok' > demo.txt
 python3 skills/doodle/scripts/doodle.py demo.txt
 ```
 
-Abra o `demo.svg` gerado no navegador. Veja os sete tipos no [tutorial](docs/tutorial.pt-BR.md#5-escrever-os-seus-próprios-desenhos).
+Abra o `demo.svg` gerado no navegador. Acrescente `--theme chalk` para ver outro visual, ou veja os nove tipos no
+[tutorial](docs/tutorial.pt-BR.md#5-escrever-os-seus-próprios-desenhos).
 
 Para um arquivo Markdown com blocos `doodle`, rode `python3 skills/doodle/scripts/doodle.py notas.md` na raiz do repositório.
 Isso **altera o próprio `notas.md`**. As especificações ficam em comentários HTML para editar e renderizar novamente.
-Use `-o assets/diagrams` para escolher outra pasta de imagens; repita a opção nas próximas renderizações daquele documento.
-No modo Markdown, as especificações e os caminhos dos SVGs são verificados antes de gravar os arquivos.
+Para guardar as imagens em outra pasta, use `"imageDir": "assets/diagrams"` no `doodle.json` (ou passe `-o assets/diagrams` em toda execução).
+No modo Markdown, as especificações e os caminhos dos SVGs são verificados antes de gravar os arquivos; `--check` valida e
+revisa sem gravar nada.
 
 ## Organização do repositório
 
@@ -167,7 +215,7 @@ skills/doodle/
   SKILL.md           Instruções e gatilhos de ativação
   agents/            Metadados de apresentação no Codex
   scripts/           Renderizador Python sem dependências
-  references/        Sintaxe dos desenhos
+  references/        Sintaxe dos desenhos e personalização
 examples/            Explicações ilustradas e seus SVGs
 docs/                Tutoriais em inglês e português
 tests/               Testes do parser, renderizador e edição do Markdown

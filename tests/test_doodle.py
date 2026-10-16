@@ -1,3 +1,6 @@
+import contextlib
+import io
+import json
 import os
 import re
 import sys
@@ -20,6 +23,12 @@ DOCS = [os.path.join(ROOT, "docs", n) for n in ("tutorial.md", "tutorial.pt-BR.m
 def blocks(path):
     with open(path, encoding="utf-8") as fh:
         return doodle.FENCE.findall(fh.read())
+
+
+def cli(args):
+    """Run the command line quietly; returns the exit code."""
+    with contextlib.redirect_stdout(io.StringIO()), contextlib.redirect_stderr(io.StringIO()):
+        return doodle.main(args)
 
 
 class ParseTest(unittest.TestCase):
@@ -48,6 +57,15 @@ class ParseTest(unittest.TestCase):
         self.assertEqual(doodle.split_edge("A -> B"), ("A", "B", False, "", "neutral"))
         self.assertEqual(doodle.split_edge("A ~> B: hi | ok"), ("A", "B", True, "hi", "ok"))
         self.assertIsNone(doodle.split_edge("just a row"))
+
+
+class SlugTest(unittest.TestCase):
+    def test_slug(self):
+        self.assertEqual(doodle.slug("Por que o cache é útil?"), "por-que-o-cache-e-util")
+        self.assertEqual(doodle.slug("Server sends 304 Not Modified when the ETag matches"),
+                         "server-sends-304-not-modified-when-the")
+        self.assertEqual(doodle.slug("x" * 60), "x" * 40)
+        self.assertEqual(doodle.slug("!!!"), "diagram")
 
 
 class WrapTest(unittest.TestCase):
@@ -99,10 +117,15 @@ class RenderTest(unittest.TestCase):
                 self.assertLess(float(y), h, src)
 
     def test_dark_mode_and_sketch(self):
-        _, svg = doodle.render("stack: S\n@sketch\nA | b | ok")
+        src = "stack: S\n@sketch\nA | b | ok\nB | c"
+        _, svg = doodle.render(src)
+        self.check_svg(svg)
         self.assertIn("prefers-color-scheme:dark", svg)
-        self.assertIn('filter="url(#rough)"', svg)
-        self.assertNotIn("<text", svg.split('<g filter="url(#rough)">')[1].split("</g>")[0])
+        self.assertEqual(svg.count('class="sk s-ok"'), 1)  # each box is traced twice
+        self.assertEqual(svg.count('class="sk sk2 s-ok"'), 1)
+        self.assertNotIn("<rect x=\"28\"", svg)
+        self.assertEqual(svg, doodle.render(src)[1])  # the wobble is deterministic
+        self.assertLess(svg.rindex("<path"), svg.index('class="t"'))  # text is drawn on top of every shape
 
     def test_escaping(self):
         _, svg = doodle.render('flow: <a & "b">\nx < y | a & b')
@@ -120,7 +143,7 @@ class RenderTest(unittest.TestCase):
         self.assertIn(doodle.ICON["ok"], svg)
 
     def test_errors(self):
-        for src in ("cycle: c\nA", "compare: c", "sequence: s", "tree: t"):
+        for src in ("cycle: c\nA", "compare: c", "sequence: s", "tree: t", "bars: b", "hub: h"):
             with self.assertRaises(doodle.DoodleError, msg=src):
                 doodle.render(src)
 
@@ -254,6 +277,294 @@ class MarkdownTest(unittest.TestCase):
             self.assertEqual(doodle.render_markdown(md, "assets/diagrams"), expected)
             with self.assertRaises(doodle.DoodleError):
                 doodle.render_markdown(md)
+
+
+class NewKindsTest(unittest.TestCase):
+    def test_numbers(self):
+        cases = {"120 ms": 120, "1,200 req": 1200, "2.5 s": 2.5, "1,5 s": 1.5, "1.234,5": 1234.5,
+                 "≈ 30%": 30, "-3": -3}
+        for text, value in cases.items():
+            self.assertEqual(doodle.number(text), value, text)
+        self.assertIsNone(doodle.number("fast"))
+
+    def test_bars_scale_to_the_largest(self):
+        _, svg = doodle.render("bars: B\nA | 100 ms\nB | 50 ms | ok")
+        widths = [float(w) for w in re.findall(r'<rect x="[\d.]+" y="[\d.]+" width="([\d.]+)" height="26"', svg)]
+        self.assertEqual(len(widths), 2)
+        self.assertAlmostEqual(widths[0] / widths[1], 2, places=1)
+        self.assertIn("50 ms", svg)
+
+    def test_bars_errors(self):
+        with self.assertRaisesRegex(doodle.DoodleError, "line 3: bars need a number"):
+            doodle.render("bars: B\nA | 1\nB | fast")
+        with self.assertRaisesRegex(doodle.DoodleError, "negative"):
+            doodle.render("bars: B\nA | -1")
+
+    def test_hub_boxes_never_overlap(self):
+        for n in range(1, 10):
+            src = "hub: H\nCenter | the middle\n" + "".join("Spoke %d | a note here\n" % i for i in range(n))
+            spec = doodle.parse(src)
+            cv = doodle.Canvas(spec)
+            doodle.draw_hub(cv, spec)
+            boxes = [tuple(map(float, m)) for m in re.findall(
+                r'<rect x="([\d.]+)" y="([\d.]+)" width="([\d.]+)" height="([\d.]+)"', "".join(cv.parts))]
+            self.assertEqual(len(boxes), n + 1)
+            for i, a in enumerate(boxes):
+                for b in boxes[i + 1:]:
+                    apart = (a[0] + a[2] <= b[0] or b[0] + b[2] <= a[0] or
+                             a[1] + a[3] <= b[1] or b[1] + b[3] <= a[1])
+                    self.assertTrue(apart, (n, a, b))
+
+    def test_hub_needs_a_spoke(self):
+        with self.assertRaisesRegex(doodle.DoodleError, "hub needs"):
+            doodle.render("hub: H\nAlone")
+
+
+class LintTest(unittest.TestCase):
+    def warnings(self, src):
+        return [m for _no, m in doodle.render(src)[0].warnings]
+
+    def test_clean_spec_has_no_warnings(self):
+        for src in blocks(DSL):
+            self.assertEqual(self.warnings(src), [], src)
+
+    def test_unknown_and_misplaced_options(self):
+        spec = doodle.parse("stack: S\n@arow @vertical\nA")
+        msgs = dict((m.split("'")[1], no) for no, m in spec.warnings)
+        self.assertIn("@arow", msgs)
+        self.assertEqual(msgs["@arow"], 2)
+        self.assertTrue(any("did you mean 'arrow'" in m for _n, m in spec.warnings))
+        self.assertTrue(any("'@vertical' has no effect on stack" in m for _n, m in spec.warnings))
+
+    def test_tone_typo(self):
+        ws = self.warnings("stack: S\nA | note | warnn")
+        self.assertTrue(any("write warn" in w for w in ws), ws)
+        self.assertEqual(self.warnings("stack: S\nA | note | lunch"), [])
+
+    def test_long_text_and_many_rows(self):
+        ws = self.warnings("stack: S\nOne two three four five six seven\n" + "X\n" * 8)
+        self.assertTrue(any("label is long (7 words)" in w for w in ws))
+        self.assertEqual(self.warnings("stack: S\nPula para a ponta da main"), [])  # short words are free
+        self.assertTrue(any("9 rows" in w for w in ws))
+
+    def test_flow_edge_typo_creates_node_with_warning(self):
+        spec, _ = doodle.render("flow: F\n[a] Start\n[b] Home\na -> Hom")
+        self.assertEqual(spec.warnings[0][0], 4)
+        self.assertIn("did you mean 'Home'", spec.warnings[0][1])
+        self.assertEqual(self.warnings("flow: F\nA -> B"), [])  # no declared nodes: creating is the intent
+
+    def test_sequence_actor_typo(self):
+        ws = self.warnings("sequence: S\nBrowser -> Server: hi\nBrowsr -> Server: again")
+        self.assertTrue(any("did you mean 'Browser'" in w for w in ws), ws)
+
+    def test_markdown_warnings_point_at_document_lines(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            md = os.path.join(tmp, "t.md")
+            with open(md, "w", encoding="utf-8") as fh:
+                fh.write("# T\n\n```doodle\nstack: S\nA | x | okk\n```\n\n<!-- doodle\nstack: R\n@arow\nB\n-->\n"
+                         "![R](img/t-r.svg)\n")
+            warnings = []
+            doodle.render_markdown(md, warnings=warnings)
+            self.assertEqual([w.split(":")[1] for w in warnings], ["5", "10"])
+
+    def test_check_writes_nothing(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            md = os.path.join(tmp, "t.md")
+            text = "```doodle\nstack: S\nA\n```\n"
+            with open(md, "w", encoding="utf-8") as fh:
+                fh.write(text)
+            self.assertEqual(cli([md, "--check"]), 0)
+            with open(md, encoding="utf-8") as fh:
+                self.assertEqual(fh.read(), text)
+            self.assertEqual(os.listdir(tmp), ["t.md"])
+            with open(md, "w", encoding="utf-8") as fh:
+                fh.write("```doodle\npie: S\n```\n")
+            self.assertEqual(cli([md, "--check"]), 1)
+
+    def test_error_lines_point_at_document_lines(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            md = os.path.join(tmp, "t.md")
+            with open(md, "w", encoding="utf-8") as fh:
+                fh.write("# T\n\n```doodle\n// draft\npie: S\n```\n")
+            with self.assertRaisesRegex(doodle.DoodleError, r"t\.md:5: unknown kind 'pie'"):
+                doodle.render_markdown(md)
+
+
+class DocsInSyncTest(unittest.TestCase):
+    def read(self, *parts):
+        with open(os.path.join(ROOT, *parts), encoding="utf-8") as fh:
+            return fh.read()
+
+    def test_skill_and_references_cover_everything(self):
+        skill = self.read("skills", "doodle", "SKILL.md")
+        custom = self.read("skills", "doodle", "references", "customize.md")
+        dsl = self.read("skills", "doodle", "references", "dsl.md")
+        for kind in doodle.KINDS:
+            self.assertIn("| `%s` |" % kind, skill)
+            self.assertIn("## %s" % kind, dsl)
+        for theme in doodle.THEMES:
+            self.assertIn("`%s`" % theme, skill)
+            self.assertIn("| `%s` |" % theme, custom)
+        for key in doodle.DEFAULTS:
+            self.assertIn("| `%s` |" % key, custom)
+        with open(os.path.join(ROOT, "skills", "doodle", "references", "doodle.schema.json"), encoding="utf-8") as fh:
+            schema = json.load(fh)
+        self.assertEqual(set(schema["properties"]) - {"$schema"}, set(doodle.DEFAULTS))
+        self.assertEqual(schema["properties"]["theme"]["enum"], list(doodle.THEMES))
+        self.assertEqual(set(schema["definitions"]["colors"]["properties"]), set(doodle.TONES + doodle.BASE_KEYS))
+        self.assertTrue(doodle.SCHEMA_URL.endswith("references/doodle.schema.json"))
+        for choice in doodle.CHOICES["audience"] + doodle.CHOICES["depth"]:
+            self.assertIn("`%s`" % choice, skill)
+
+
+class StyleTest(unittest.TestCase):
+    def test_every_theme_renders_valid_svg(self):
+        for name in doodle.THEMES:
+            with self.subTest(theme=name):
+                _, svg = doodle.render("flow: F\nA | x | ok\nB | y | bad", doodle.Style(theme=name))
+                ET.fromstring(svg)
+                self.assertIn(doodle.THEMES[name]["light"]["bg"], svg)
+
+    def test_block_theme_option(self):
+        spec, svg = doodle.render("stack: S\n@theme blueprint @arrow\nA\nB")
+        self.assertEqual(spec.theme, "blueprint")
+        self.assertEqual(spec.opts, {"arrow"})
+        self.assertIn('id="grid"', svg)
+        self.assertEqual(doodle.parse("stack: S\n@theme=chalk\nA").theme, "chalk")
+
+    def test_unknown_theme_suggests(self):
+        with self.assertRaisesRegex(doodle.DoodleError, "did you mean 'chalk'"):
+            doodle.render("stack: S\n@theme chalck\nA")
+
+    def test_chalk_is_sketchy_by_default(self):
+        self.assertTrue(doodle.Style(theme="chalk").sketch)
+        self.assertFalse(doodle.Style(theme="chalk", sketch=False).sketch)
+
+    def test_scheme(self):
+        auto = doodle.Style().css()
+        self.assertIn("prefers-color-scheme:dark", auto)
+        light = doodle.Style(scheme="light").css()
+        self.assertNotIn("prefers-color-scheme", light)
+        self.assertIn(doodle.PAPER_LIGHT["bg"], light)
+        dark = doodle.Style(scheme="dark").css()
+        self.assertIn(doodle.PAPER_DARK["bg"], dark)
+        self.assertNotIn(doodle.PAPER_LIGHT["bg"], dark)
+
+    def test_custom_colors_and_dark_derivation(self):
+        st = doodle.Style(colors={"info": "#7c3aed", "bg": "#ffffff", "error": "#ff0000"})
+        self.assertEqual(st.light["info"][1], "#7c3aed")
+        self.assertEqual(st.light["bad"][1], "#ff0000")  # tone aliases work as color names
+        self.assertEqual(st.light["bg"], "#ffffff")
+        self.assertNotEqual(st.dark["info"][1], "#7c3aed")  # lightened for dark backgrounds
+        self.assertEqual(st.dark["bg"], doodle.PAPER_DARK["bg"])
+        st = doodle.Style(colors={"ok": "#00aa00"}, dark_colors={"ok": "#33ff33"})
+        self.assertEqual(st.dark["ok"][1], "#33ff33")
+
+    def test_bad_colors(self):
+        with self.assertRaisesRegex(doodle.DoodleError, "must look like"):
+            doodle.Style(colors={"info": "purple"})
+        with self.assertRaisesRegex(doodle.DoodleError, "unknown color"):
+            doodle.Style(colors={"accent": "#123456"})
+
+    def test_frame_off_and_no_shadow(self):
+        _, svg = doodle.render("stack: S\nA", doodle.Style(theme="clean", frame=False))
+        self.assertNotIn('class="bg"', svg)
+        self.assertNotIn("url(#sh)", svg)
+
+    def test_description_for_screen_readers(self):
+        _, svg = doodle.render("flow: F\n[a] Start | go | ok\na -> B: next")
+        self.assertIn("<desc>Start - go; a -&gt; B: next</desc>", svg)
+
+    def test_badge_text_contrasts_in_dark_mode(self):
+        self.assertEqual(doodle.PAPER_DARK["on"], doodle.PAPER_DARK["bg"])
+
+
+class SettingsTest(unittest.TestCase):
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.root = self.tmp.name
+        self.old = os.environ.get("XDG_CONFIG_HOME")
+        os.environ["XDG_CONFIG_HOME"] = os.path.join(self.root, "xdg")
+
+    def tearDown(self):
+        if self.old is None:
+            os.environ.pop("XDG_CONFIG_HOME", None)
+        else:
+            os.environ["XDG_CONFIG_HOME"] = self.old
+        self.tmp.cleanup()
+
+    def write(self, rel, data):
+        path = os.path.join(self.root, rel)
+        os.makedirs(os.path.dirname(path), exist_ok=True)
+        with open(path, "w", encoding="utf-8") as fh:
+            fh.write(data if isinstance(data, str) else json.dumps(data))
+        return path
+
+    def test_defaults(self):
+        s = doodle.load_settings(self.root)
+        self.assertEqual((s["theme"], s["audience"], s["sources"]), ("paper", "beginner", []))
+
+    def test_project_overrides_user_and_merges_colors(self):
+        self.write("xdg/doodle/config.json", {"theme": "candy", "audience": "kid", "colors": {"info": "#111111"}})
+        self.write("repo/.git/HEAD", "")
+        self.write("repo/doodle.json", {"theme": "clean", "colors": {"ok": "#222222"}})
+        os.makedirs(os.path.join(self.root, "repo", "docs", "deep"))
+        s = doodle.load_settings(os.path.join(self.root, "repo", "docs", "deep"))
+        self.assertEqual((s["theme"], s["audience"]), ("clean", "kid"))
+        self.assertEqual(s["colors"], {"info": "#111111", "ok": "#222222"})
+        self.assertEqual(len(s["sources"]), 2)
+
+    def test_nested_files_cascade(self):
+        self.write("repo/.git/HEAD", "")
+        self.write("repo/doodle.json", {"theme": "clean", "audience": "developer"})
+        self.write("repo/team/doodle.json", {"depth": "deep"})
+        s = doodle.load_settings(os.path.join(self.root, "repo", "team"))
+        self.assertEqual((s["theme"], s["audience"], s["depth"]), ("clean", "developer", "deep"))
+        self.assertEqual([os.path.basename(os.path.dirname(p)) for p in s["sources"]], ["repo", "team"])
+
+    def test_search_stops_at_repository_root(self):
+        self.write("doodle.json", {"theme": "chalk"})
+        self.write("repo/.git/HEAD", "")
+        self.assertEqual(doodle.load_settings(os.path.join(self.root, "repo"))["theme"], "paper")
+
+    def test_validation(self):
+        warnings = []
+        self.write("doodle.json", {"theme": "clean", "colour": {}})
+        doodle.load_settings(self.root, warnings=warnings)
+        self.assertTrue(any("unknown setting 'colour'" in w for w in warnings))
+        self.write("doodle.json", {"audience": "toddler"})
+        with self.assertRaisesRegex(doodle.DoodleError, "audience"):
+            doodle.load_settings(self.root)
+        self.write("doodle.json", "{oops")
+        with self.assertRaisesRegex(doodle.DoodleError, "invalid JSON"):
+            doodle.load_settings(self.root)
+
+    def test_markdown_uses_project_settings(self):
+        self.write("doodle.json", {"theme": "blueprint", "imageDir": "figures"})
+        md = self.write("topic.md", "```doodle\nstack: S\nA\n```\n")
+        self.assertEqual(cli([md, "-q"]), 0)
+        with open(os.path.join(self.root, "figures", "topic-s.svg"), encoding="utf-8") as fh:
+            self.assertIn('id="grid"', fh.read())
+
+    def test_cli_flags_win(self):
+        self.write("doodle.json", {"theme": "blueprint"})
+        spec = self.write("s.txt", "stack: S\nA\n")
+        self.assertEqual(cli([spec, "--theme", "clean", "--scheme", "light"]), 0)
+        with open(os.path.join(self.root, "s.svg"), encoding="utf-8") as fh:
+            svg = fh.read()
+        self.assertNotIn('id="grid"', svg)
+        self.assertNotIn("prefers-color-scheme", svg)
+
+    def test_init_and_settings_commands(self):
+        cwd = os.getcwd()
+        os.chdir(self.root)
+        try:
+            self.assertEqual(cli(["--init"]), 0)
+            self.assertEqual(cli(["--init"]), 1)  # never overwrites
+            with open("doodle.json", encoding="utf-8") as fh:
+                self.assertEqual(json.load(fh)["theme"], "paper")
+        finally:
+            os.chdir(cwd)
 
 
 if __name__ == "__main__":

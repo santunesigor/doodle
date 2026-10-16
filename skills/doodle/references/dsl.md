@@ -25,7 +25,14 @@ A **row** is `label | note | tone`.
 |---|---|
 | `@sketch` | hand-drawn look: wobbly shapes, handwriting font when available |
 | `@vertical` / `@horizontal` | force the direction of `timeline` and `flow` (the default is automatic) |
-| `@arrow` | arrows between `compare` columns and between `stack` layers |
+| `@arrow` | arrows between `compare` columns, between `stack` layers, and from a `hub` center outward |
+| `@theme NAME` | draw this one diagram in another theme: `paper`, `clean`, `candy`, `blueprint`, `chalk` |
+
+The theme, colors and light/dark behavior of a whole document come from `doodle.json`; see
+[customize.md](customize.md).
+
+The renderer warns (it doesn't fail) about unknown options, misspelled tones, flow edges that match no node,
+and text that is too long. Run `doodle.py --check FILE.md` to see those warnings without writing anything.
 
 SVGs include a dark palette through `prefers-color-scheme`. It activates in viewers that support this media query;
 other viewers may show the light palette.
@@ -153,13 +160,42 @@ Browser -> Server: key exchange
 Server ~> Browser: encrypted from now on | ok
 ```
 
+## bars
+
+Use it when the point is a **quantity**: time, size, count, cost. Each row's note holds the number, plus any unit you
+want to show. Bars are scaled against the largest one. `1,200`, `2.5` and `1,5` are all read as numbers.
+
+```doodle
+bars: Where a page load spends its time
+> one visit, in milliseconds
+DNS lookup | 120 ms | warn
+TLS handshake | 80 ms
+Server work | 410 ms | bad
+Render | 60 ms | ok
+```
+
+## hub
+
+The first row is the center; every other row is drawn around it. Use it for "what is this made of?" or for the
+pieces of a concept. A neutral center is drawn as `info`. Add `@arrow` for arrows that point outward.
+
+```doodle
+hub: What a URL is made of
+URL | the full address | info
+Scheme | https://
+Host | www.example.com | ok
+Path | /docs/page
+Query | ?lang=pt | warn
+```
+
 ---
 
 ## Tips
 
 - Pick the kind by the question: "in what order?" → `timeline`; "what decides what?" → `flow`;
   "why does it keep happening?" → `cycle`; "what changed?" → `compare`; "where is it?" → `tree`;
-  "what sits on top of what?" → `stack`; "who talks to whom?" → `sequence`.
+  "what sits on top of what?" → `stack`; "who talks to whom?" → `sequence`; "how much?" → `bars`;
+  "what is it made of?" → `hub`.
 - Use tones to tell the story: `bad` is the broken part, `ok` is the fix or the healthy path, `warn` is the risky
   step, and `info` is the actor or the input.
 - Don't use `-->` anywhere; use `~>` for dashed arrows.
