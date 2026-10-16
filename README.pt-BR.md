@@ -22,7 +22,7 @@ Doodle é uma [Agent Skill](https://agentskills.io/) para **Claude Code, Codex, 
 Explica bugs, fluxos de código, protocolos e conceitos em um documento Markdown no seu nível, no seu idioma.
 
 <p align="center">
-  <img src="examples/git-rebase/img/git-rebase-pt-br-merge-ou-rebase.svg" alt="Comparação entre merge e rebase gerada pelo Doodle">
+  <img src="docs/demo.svg" alt="Demonstração do Doodle: um pedido vira um spec de cinco linhas e depois um diagrama do ciclo de cache do DNS">
 </p>
 
 ## Instalação
