@@ -555,6 +555,29 @@ class SettingsTest(unittest.TestCase):
         self.assertNotIn('id="grid"', svg)
         self.assertNotIn("prefers-color-scheme", svg)
 
+    def test_docs_dir_is_added_to_gitignore_once(self):
+        self.write("repo/.git/HEAD", "")
+        self.write("repo/.gitignore", "*.pyc")
+        md = self.write("repo/doodle/topic.md", "```doodle\nstack: S\nA\n```\n")
+        other = self.write("repo/notes/topic.md", "```doodle\nstack: S\nA\n```\n")
+        self.assertEqual(cli([other, "-q"]), 0)  # outside docsDir: untouched
+        with open(os.path.join(self.root, "repo", ".gitignore"), encoding="utf-8") as fh:
+            self.assertEqual(fh.read(), "*.pyc")
+        self.assertEqual(cli([md, "-q"]), 0)
+        self.assertEqual(cli([md, "-q"]), 0)
+        with open(os.path.join(self.root, "repo", ".gitignore"), encoding="utf-8") as fh:
+            lines = fh.read().splitlines()
+        self.assertEqual((lines[0], lines[-1], lines.count("/doodle/")), ("*.pyc", "/doodle/", 1))
+        self.assertEqual(doodle.load_settings(os.path.join(self.root, "repo"))["root"],
+                         os.path.join(self.root, "repo"))
+
+    def test_gitignore_can_be_turned_off(self):
+        self.write("repo/.git/HEAD", "")
+        self.write("repo/doodle.json", {"docsDir": "docs/explain", "gitignore": False})
+        md = self.write("repo/docs/explain/topic.md", "```doodle\nstack: S\nA\n```\n")
+        self.assertEqual(cli([md, "-q"]), 0)
+        self.assertFalse(os.path.exists(os.path.join(self.root, "repo", ".gitignore")))
+
     def test_init_and_settings_commands(self):
         cwd = os.getcwd()
         os.chdir(self.root)

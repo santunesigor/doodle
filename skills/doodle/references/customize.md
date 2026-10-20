@@ -34,7 +34,8 @@ doodle.py --themes      # list the themes
 | `audience` | `kid`, `beginner`, `developer`, `expert` | `beginner` | agent |
 | `depth` | `quick`, `standard`, `deep` | `standard` | agent |
 | `language` | `auto` (the user's language) or a language name such as `pt-BR` | `auto` | agent |
-| `docsDir` | folder for new explanations, relative to the project root | current folder | agent |
+| `docsDir` | folder for new explanations, relative to the project root (`""`: the current folder) | `doodle` | agent |
+| `gitignore` | `true` adds `docsDir` to the repository's `.gitignore` when a document in it is rendered; `false` to commit the explanations | `true` | renderer |
 | `notes` | free-text house rules for the writer | `""` | agent |
 
 Unknown keys produce a warning with a suggestion, so typos don't fail silently. Files made with `--init` point to
@@ -70,6 +71,7 @@ A team of senior engineers that wants plain, brand-colored diagrams in `docs/exp
   "colors": {"info": "#6d28d9"},
   "audience": "developer",
   "docsDir": "docs/explain",
+  "gitignore": false,
   "notes": "Link to files as path:line. Mention the related runbook when there is one."
 }
 ```

@@ -152,7 +152,8 @@ seniores e use o tema clean com o nosso roxo", e ele guarda isso num `doodle.jso
   "audience": "developer",
   "depth": "deep",
   "language": "pt-BR",
-  "docsDir": "docs/explicacoes"
+  "docsDir": "docs/explicacoes",
+  "gitignore": false
 }
 ```
 

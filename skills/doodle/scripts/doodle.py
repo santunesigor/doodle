@@ -1190,7 +1190,8 @@ CONFIG_NAME = "doodle.json"
 DEFAULTS = {
     "theme": "paper", "sketch": None, "scheme": "auto", "frame": True, "font": "", "imageDir": "img",
     "colors": {}, "darkColors": {},
-    "audience": "beginner", "depth": "standard", "language": "auto", "docsDir": "", "notes": "",
+    "audience": "beginner", "depth": "standard", "language": "auto", "docsDir": "doodle", "gitignore": True,
+    "notes": "",
 }
 CHOICES = {"audience": ("kid", "beginner", "developer", "expert"), "depth": ("quick", "standard", "deep"),
            "scheme": SCHEMES}
@@ -1199,6 +1200,16 @@ CHOICES = {"audience": ("kid", "beginner", "developer", "expert"), "depth": ("qu
 def user_config_path():
     base = os.environ.get("XDG_CONFIG_HOME") or os.path.join(os.path.expanduser("~"), ".config")
     return os.path.join(base, "doodle", "config.json")
+
+
+def project_root(start):
+    """The nearest folder at or above start that holds .git, or None outside a repository."""
+    d = os.path.abspath(start)
+    while not os.path.exists(os.path.join(d, ".git")):
+        if os.path.dirname(d) == d:
+            return None
+        d = os.path.dirname(d)
+    return d
 
 
 def project_configs(start):
@@ -1249,6 +1260,7 @@ def load_settings(start=".", explicit=None, warnings=None):
             settings[k] = v
         sources.append(os.path.abspath(p))
     settings["sources"] = sources
+    settings["root"] = project_root(start)
     return settings
 
 
@@ -1269,7 +1281,8 @@ STARTER = {
     "audience": "beginner",
     "depth": "standard",
     "language": "auto",
-    "docsDir": "",
+    "docsDir": "doodle",
+    "gitignore": True,
     "notes": "",
 }
 
@@ -1405,6 +1418,31 @@ def render_markdown(path, img_dir=None, style=None, dry_run=False, warnings=None
     return [rel for _out, _svg, rel in pending]
 
 
+def ignore_docs_dir(md_path, settings):
+    """Add docsDir to the repository's .gitignore when a document inside it is rendered, unless
+    "gitignore" is false. Returns the entry it added, or None."""
+    docs = (settings.get("docsDir") or "").strip("/\\")
+    root = project_root(os.path.dirname(os.path.abspath(md_path)))
+    if not settings.get("gitignore") or not docs or not root:
+        return None
+    folder = os.path.realpath(os.path.join(root, docs))
+    if os.path.commonpath([folder, os.path.realpath(md_path)]) != folder:
+        return None
+    entry = "/%s/" % docs.replace(os.sep, "/")
+    path = os.path.join(root, ".gitignore")
+    try:
+        with open(path, encoding="utf-8") as fh:
+            text = fh.read()
+    except OSError:
+        text = ""
+    if entry.strip("/") in {line.strip().strip("/") for line in text.splitlines()}:
+        return None
+    with open(path, "a", encoding="utf-8") as fh:
+        fh.write("%s# Doodle explanations (set \"gitignore\": false in doodle.json to commit them)\n%s\n"
+                 % ("\n" if text and not text.endswith("\n") else "", entry))
+    return entry
+
+
 def DONE_PATHS(md):
     return [m.group(2) for m in DONE.finditer(md)]
 
@@ -1468,6 +1506,9 @@ def main(argv):
             rels = render_markdown(src, a.out or settings.get("imageDir") or "img", style, a.check, warnings)
             for rel in rels if not a.check else ():
                 print(rel)
+            added = None if a.check else ignore_docs_dir(src, settings)
+            if added:
+                print("note: added %s to .gitignore" % added, file=sys.stderr)
         else:
             with open(src, encoding="utf-8") as fh:
                 spec, svg = render(fh.read(), style)

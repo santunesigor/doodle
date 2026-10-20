@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+- New explanations go to a `doodle/` folder at the repository root by default (`docsDir`), and rendering one adds
+  `/doodle/` to the repository's `.gitignore`. Set `"gitignore": false` to commit them, or `"docsDir": ""` for the
+  old behavior (the current folder). `--settings` now prints the repository `root`.
+
 ## 0.2.0
 
 ### Make it yours

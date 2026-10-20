@@ -38,7 +38,10 @@
     "audience": {"enum": ["kid", "beginner", "developer", "expert"], "default": "beginner"},
     "depth": {"enum": ["quick", "standard", "deep"], "default": "standard"},
     "language": {"type": "string", "default": "auto", "description": "auto = the user's language"},
-    "docsDir": {"type": "string", "description": "Folder for new explanations, relative to the project root"},
+    "docsDir": {"type": "string", "default": "doodle",
+                "description": "Folder for new explanations, relative to the project root"},
+    "gitignore": {"type": "boolean", "default": true,
+                  "description": "Add docsDir to the repository's .gitignore; false to commit the explanations"},
     "notes": {"type": "string", "description": "House rules for the writer, in plain words"}
   }
 }
