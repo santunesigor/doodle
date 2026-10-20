@@ -290,7 +290,8 @@ Depois mude só o que importa para você. Tudo é opcional:
   por tom), `scheme` (`auto`, `light`, `dark`) e `imageDir`. Experimente com `--theme NOME`, ou veja todos lado a lado
   na [galeria de temas](../examples/themes/themes.md).
 - **Como escreve:** `audience` (`kid`, `beginner`, `developer`, `expert`), `depth` (`quick`, `standard`, `deep`),
-  `language`, `docsDir` (onde salvar as explicações novas) e `notes` (as regras da casa, em palavras normais).
+  `language`, `docsDir` (onde salvar as explicações novas; `doodle/` por padrão, que o Doodle adiciona ao `.gitignore` a menos
+  que você defina `"gitignore": false`) e `notes` (as regras da casa, em palavras normais).
 
 O Doodle lê todos os `doodle.json` da raiz do repositório até a pasta do documento; um arquivo numa subpasta muda só
 as chaves que cita. Padrões para todos os

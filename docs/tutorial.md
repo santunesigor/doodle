@@ -288,7 +288,8 @@ Then edit the values you care about. Everything is optional:
   tone), `scheme` (`auto`, `light`, `dark`) and `imageDir`. Try them with `--theme NAME`, or see them side by side in
   the [theme gallery](../examples/themes/themes.md).
 - **How it writes:** `audience` (`kid`, `beginner`, `developer`, `expert`), `depth` (`quick`, `standard`, `deep`),
-  `language`, `docsDir` (where new explanations go) and `notes` (your house rules, in plain words).
+  `language`, `docsDir` (where new explanations go; `doodle/` by default, which Doodle adds to `.gitignore` unless you set
+  `"gitignore": false`) and `notes` (your house rules, in plain words).
 
 Doodle reads every `doodle.json` from the repository root down to the document's folder; a file in a subfolder
 overrides only the keys it names. Defaults for all

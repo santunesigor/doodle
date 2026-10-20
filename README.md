@@ -151,6 +151,7 @@ senior developers and use the clean theme with our purple", and it saves that in
   "audience": "developer",
   "depth": "deep",
   "docsDir": "docs/explain",
+  "gitignore": false,
   "notes": "Link to files as path:line."
 }
 ```

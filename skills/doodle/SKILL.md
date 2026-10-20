@@ -19,8 +19,10 @@ Keep generated SVG markup out of context unless debugging the renderer; inspect 
    "quick"/"rápido" means `quick`, "in depth"/"a fundo" means `deep`.
 2. **Understand first.** If the topic is about this project, read the real code, logs and data. Explanations must be
    true; never invent evidence.
-3. **Write `<topic-slug>.md`** in `docsDir` (or the current directory, or where the user asks), in the user's
-   language unless `language` says otherwise, using the structure below.
+3. **Write `<topic-slug>.md`** in `docsDir` (`doodle/` by default), relative to the `root` that `--settings`
+   prints (the current directory when `root` is null), or where the user asks. Use the user's language unless
+   `language` says otherwise, and the structure below. Rendering adds `docsDir` to the repository's `.gitignore`
+   unless `gitignore` is false; if the user wants to commit the explanations, set `"gitignore": false`.
 4. **Render:** `<doodle> <topic-slug>.md`. It prints the SVG paths, then `warning: file:line: ...` lines. Fix warnings
    that reveal a mistake (a misspelled tone, an edge to a node that doesn't exist); the rest are judgment calls.
    On `error: file:line: ...`, fix that line and run again. Re-running is safe: rendered blocks are kept as
@@ -108,4 +110,4 @@ in docs/explain", "use our brand purple"), save it instead of just applying it o
 
 Then re-render any document they are looking at. Settings: `theme` (`paper`, `clean`, `candy`, `blueprint`,
 `chalk`), `sketch`, `scheme` (`auto`/`light`/`dark`), `colors` (per tone, `#hex`), `imageDir`, `audience`, `depth`,
-`language`, `docsDir`, `notes`. Details and examples: [references/customize.md](references/customize.md).
+`language`, `docsDir`, `gitignore`, `notes`. Details and examples: [references/customize.md](references/customize.md).
